@@ -2,7 +2,7 @@ import java.net.*;
 import java.util.*;
 
 class UdpChatServer{
-	HashMap<String,ArrayList<String>> clients = new HashMap();
+	Hashtable<String,ArrayList<String>> clients = new HashMap();
 	// <nick-name,[ip,port,status]>
 	int port;
 	DatagramSocket ds;
@@ -15,6 +15,39 @@ class UdpChatServer{
 		InetAddress ip = InetAddress.getByName(ip_str);
 		DatagramPacket dp = new DatagramPacket(content.getBytes(), content.length(), ip, client_port);
 		ds.send(dp);
+	}
+
+	public void broadcast(){
+		if(clients.isEmpty()){
+			// do nothing
+		}
+		else{
+			Enumeration users = clients.keys();
+			while(users.hasMoreElements()){
+				String nick_name = users.nextElement();
+				String user_ip = clients.get(nick_name).get(0);
+				String user_port = clients.get(nick_name).get(1);
+				this.send(clients.toString(),user_ip,user_port);
+			}
+		}
+	}
+
+	public void register(String info){
+		String[] in = info.split('*');
+		System.out.println(in[0]);
+		System.out.println(in[1]);
+		System.out.println(in[2]);
+		String nick_name = in[0];
+		String clnt_ip = in[1];
+		String clnt_port = in[2];
+		if(clients.containsKey(nick_name)){
+			// TODO send nak
+		}
+		else{
+			clients.put(nick_name,new ArrayList(Arrays.asList(clnt_ip,clnt_port)));
+			// TODO send ack
+			this.broadcast();
+		}
 	}
 
 	public void recv_register() throws Exception {
@@ -144,6 +177,9 @@ public class UdpChat{
 			  client.send(nick_name+"*"+client.getIP()+"*"+client_port,server_ip,server_port);
 			  //System.out.println(client.recv());
 			  System.out.print(">>> [Welcome. You are registered.]\n");
+			  while(true){
+				  System.out.print(">>>");
+			  }
 			  client.destroy();
 		  }
 	  }
