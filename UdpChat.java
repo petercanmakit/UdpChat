@@ -15,7 +15,6 @@ class UdpChatServer{
 			System.out.println(String.valueOf(e));
 			System.exit(1);
 		}
-
 	}
 
 	public  void send(String content, String ip_str, int client_port) throws Exception{
@@ -118,6 +117,8 @@ class UdpChatClient{
 
 	Hashtable<String,ArrayList<String>> clients = new Hashtable<String,ArrayList<String>>();
 
+	Queue<String> messageQ = new LinkedList<Stirng>();
+
 	String nick_name;
 	int port;
 	String server_ip;
@@ -185,12 +186,18 @@ class UdpChatClient{
 			// this packet is from other client
 			// TODO send ack
 			System.out.println(str);
-			String[] strs = str.split(":",2);
+			String[] strs = str.split(":\\b+",2);
 			// for(int i =0;i<strs.length;i++) System.out.println(strs[i]);
 			String back_name = strs[0];
 			String back_ip = clients.get(back_name).get(0);
 			int back_port = Integer.valueOf(clients.get(back_name).get(1));
 			System.out.println("sending ack to : " + back_ip + "  "+back_port);
+			try{
+				Thread.sleep(500);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
 			try{
 				send("ACK", back_ip, back_port);
 				System.out.println("sent ack to : " + back_ip + "  "+back_port);
@@ -243,7 +250,7 @@ class UdpChatClient{
 					System.out.println("Waiting for ACK in try");
 					// TODO send signal to thread to pause recv in thread
 					// ds.setSoTimeout(5);
-					ds.close(); // cause thread to SocketException
+					// ds.close(); // cause thread to SocketException
 					try{
 						ds = new DatagramSocket(sock_addr);
 					}
@@ -271,7 +278,7 @@ class UdpChatClient{
     	};
     	Timer timer_4_ACK = new Timer();
     	long delay = 0;
-    	long inteval = 500; //msec
+    	long inteval = 2500; //msec
     	// schedules the task to be run in an interval
     	timer_4_ACK.schedule(task, delay);
 		try{
@@ -283,6 +290,9 @@ class UdpChatClient{
 		}
 
 		// TODO time out send to server
+
+		System.out.println("before checking ack status is " + ack_status);
+
 		if(ack_status.equals("ACK")){
 			System.out.println("wait finished ");
 			System.out.println("ack status is " + ack_status);
@@ -402,8 +412,6 @@ class receiver implements Runnable {
 			catch (Exception e) {
 				e.printStackTrace();
 			}
-
-
 			System.out.print("receiver>>> ");
 		}
 
