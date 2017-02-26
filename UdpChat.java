@@ -123,6 +123,7 @@ class UdpChatClient{
 	String server_ip;
 	int server_port;
 	DatagramSocket ds;
+	SocketAddress sock_addr;
 	UdpChatClient(int portNumber, String serverIP, int serverPort, String nname) throws Exception{
 		server_ip = serverIP;
 		port = portNumber;
@@ -136,8 +137,12 @@ class UdpChatClient{
 			System.exit(1);
 		}
 
+		sock_addr = ds.getLocalSocketAddress();
+
 		System.out.println("Client info: nick_name: "+nick_name+" serverIp "+server_ip+" server_port "+server_port+" client_port "+port);
 	}
+
+
 
 	public void destroy(){
 		ds.close();
@@ -237,7 +242,17 @@ class UdpChatClient{
 				try{
 					System.out.println("Waiting for ACK in try");
 					// TODO send signal to thread to pause recv in thread
-					interuptRecvThread()
+					// ds.setSoTimeout(5);
+					ds.close(); // cause thread to SocketException
+					try{
+						ds = new DatagramSocket(sock_addr);
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+						System.exit(1);
+					}
+					System.out.println("socket re opened!");
+
 					// this.notify();
 					wait = recv();
 					System.out.println("wait is "+ wait);
@@ -288,6 +303,9 @@ class UdpChatClient{
 			}
 
 			System.out.println("[No ACK from " + user_recver +", message sent to server.]\n>>> ");
+		}
+		synchronized (this){
+			this.notify();
 		}
 
 	}
@@ -361,22 +379,34 @@ class receiver implements Runnable {
 
 	@Override
 	public void run(){
-		while(client.waiting4ack!=true){
-			synchronized(client){
-				try{
-						client.recv();
-				}
-				catch(Exception ex){
-					if(ex.equals(SocketTimeoutException)){
-						System.out.println("This receiver is interupted by wating for receiving ACK!...")
-						System.out.println("Start wait() until being notified!...");
-						client.wait();
-						System.out.println("I am notified, start receiving for regular massage!...");
-					}
-				}
+		while(true){
+
+			try{
+				client.recv();
 			}
+			catch(SocketException ex){
+				System.out.println("This receiver is interupted by wating for receiving ACK!...");
+				System.out.println("Start wait() until being notified!...");
+				synchronized(client){
+					try{
+						client.wait();
+					}
+					catch (Exception eeee) {
+						eeee.printStackTrace();
+					}
+
+				}
+				System.out.println("I am notified, start receiving for regular massage!...");
+				continue;
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+
+
 			System.out.print("receiver>>> ");
 		}
+
 	}
 }
 
