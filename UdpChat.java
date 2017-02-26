@@ -6,13 +6,14 @@ class UdpChatServer{
 	// <nick-name,[ip,port,status]>
 	int port;
 	DatagramSocket ds;
-	UdpChatServer(int portNumber) throws Exception{
+	UdpChatServer(int portNumber) {
 		port = portNumber;
 		try{
 			ds = new DatagramSocket(port);
 		}
 		catch (Exception e) {
 			System.out.println(String.valueOf(e));
+			System.exit(1);
 		}
 
 	}
@@ -24,8 +25,10 @@ class UdpChatServer{
 	}
 
 	public void broadcast() throws Exception{
+		System.out.println("in broadcast()");
 		if(clients.isEmpty()){
 			// do nothing
+			System.out.println("in broadcast(): clients is empty");
 		}
 		else{
 			Enumeration users = clients.keys();
@@ -40,12 +43,22 @@ class UdpChatServer{
 				int user_port = Integer.valueOf(clients.get(nick_name).get(1));
 				System.out.println(user_port);
 				System.out.println(clients.toString());
-				this.send(clients.toString(),user_ip,user_port);
+				try{
+					this.send(clients.toString(),user_ip,user_port);
+					System.out.println("in broadcast(): sent to is user_port"+user_port);
+				}
+				catch (Exception e) {
+					System.out.println(String.valueOf(e));
+					System.exit(1);
+				}
+
 			}
+			System.out.println("after in broadcast()");
 		}
 	}
 
 	public void register(String info) throws Exception {
+		System.out.println("in register()");
 		String[] in = info.split("#");
 		System.out.println(in[0]);
 		System.out.println(in[1]);
@@ -53,7 +66,7 @@ class UdpChatServer{
 		String nick_name = in[0];
 		String clnt_ip = in[1];
 		String clnt_port = in[2];
-		String clnt_status = "on";
+		String clnt_status = new String("on");
 		if(clients.containsKey(nick_name)){
 			// TODO send nak
 		}
@@ -62,15 +75,16 @@ class UdpChatServer{
 			// TODO send ack
 			this.broadcast();
 		}
+		System.out.println("after in register()");
 	}
 
 	public void recv_register() throws Exception {
 		byte[] buf = new byte[1024];
-		System.out.println("before in the register()");
+		System.out.println("before in recv_register()");
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
-		System.out.println("in the register()");
+		System.out.println("in the recv_register()");
 	    ds.receive(dp);
-		System.out.println("after in the register()");
+		System.out.println("after in the recv_register()");
 	    String info = new String(dp.getData(), 0, dp.getLength());
 		System.out.println(info);
 		this.register(info);
@@ -148,13 +162,13 @@ class UdpChatClient{
 
 	}
 
-	public void recv() throws Exception{
+	public String recv() throws Exception{
 		byte[] buf = new byte[1024];
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
 	    ds.receive(dp);
 		System.out.println("Receiving!");
 		String str = new String(dp.getData(), 0, dp.getLength());
-		System.out.println(str);
+		//System.out.println(str);
 		System.out.println(dp.getAddress().toString());
 		System.out.println(dp.getPort());
 		if(dp.getAddress().toString().replace("/","").equals(server_ip) && dp.getPort()==this.server_port){
@@ -162,11 +176,25 @@ class UdpChatClient{
 			updateClients(str);
 			System.out.println(">>> [Client table updated.]");
 		}
-		else{
+		else if( !str.equals("ACK") ) {
 			// this packet is from other client
 			// TODO send ack
 			System.out.println(str);
+			String[] strs = str.split(":",2);
+			// for(int i =0;i<strs.length;i++) System.out.println(strs[i]);
+			String back_name = strs[0];
+			String back_ip = clients.get(back_name).get(0);
+			int back_port = Integer.valueOf(clients.get(back_name).get(1));
+			System.out.println("sending ack to : " + back_ip + "  "+back_port);
+			try{
+				send("ACK", back_ip, back_port);
+				System.out.println("sent ack to : " + back_ip + "  "+back_port);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
+		return str;
 
 	}
 
@@ -174,6 +202,94 @@ class UdpChatClient{
 		InetAddress ip = InetAddress.getByName(ip_str);
 		DatagramPacket dp = new DatagramPacket(content.getBytes(), content.length(), ip, port);
 		ds.send(dp);
+	}
+
+	// preparation for send_P2P()
+	String ack_status = new String("NAK");
+	void ackGot(){
+		ack_status = "ACK";
+	}
+	void ackBck(){
+		ack_status = "NAK";
+	}
+
+	public void send_P2P(String content, String user_recver) {
+		String ip_str = this.clients.get(user_recver).get(0);
+		int port_num = Integer.valueOf(this.clients.get(user_recver).get(1));
+		try{
+			this.send(content,ip_str,port_num);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		// wait 500 msec for ack
+
+		//String wait = new String("NAK");
+		ackBck();
+
+		TimerTask task = new TimerTask() {
+      		@Override
+      		public void run() {
+				System.out.println("Waiting for ACK");
+	        	// task to run goes here
+				String wait = new String("NAK");
+				try{
+					System.out.println("Waiting for ACK in try");
+					// TODO send signal to thread to pause recv in thread
+					interuptRecvThread()
+					// this.notify();
+					wait = recv();
+					System.out.println("wait is "+ wait);
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+				if(wait.equals("ACK")) {
+					System.out.println("ack status is " + ack_status);
+					ackGot();
+					System.out.println("ack status is " + ack_status);
+					// TODO cancel sleeper
+				}
+	        	System.out.println("Hello from the timer task!!!");
+	      	}
+    	};
+    	Timer timer_4_ACK = new Timer();
+    	long delay = 0;
+    	long inteval = 500; //msec
+    	// schedules the task to be run in an interval
+    	timer_4_ACK.schedule(task, delay);
+		try{
+			Thread.sleep(inteval);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
+		// TODO time out send to server
+		if(ack_status.equals("ACK")){
+			System.out.println("wait finished ");
+			System.out.println("ack status is " + ack_status);
+			ackBck();
+			System.out.println("ack status is " + ack_status);
+			System.out.println("[Message received by " + user_recver + ".+]\n>>> ");
+		}
+		else { // NAK
+			timer_4_ACK.cancel();
+			// send to server
+			try{
+				this.send(this.nick_name + "#" + user_recver + "#" + content,
+							this.server_ip, this.server_port);
+			}
+			catch (Exception e) {
+				System.out.println(e);
+				System.exit(1);
+			}
+
+			System.out.println("[No ACK from " + user_recver +", message sent to server.]\n>>> ");
+		}
+
 	}
 
 	public String getIP() { // http://hanchaohan.blog.51cto.com/2996417/793377
@@ -221,10 +337,11 @@ class sender implements Runnable {
 				System.out.println("Sending");
 				System.out.println(client.clients.toString());
 				try{
-					client.send(client.nick_name+":  "+message,client.clients.get(name).get(0),
-								Integer.valueOf(client.clients.get(name).get(1)));
+					client.send_P2P(client.nick_name+":  "+message, name);
 				}
-				catch(Exception ex){}
+				catch(Exception ex){
+					ex.printStackTrace();
+				}
 			}
 			else{
 				System.out.println("Usage: send <name> <message>");
@@ -244,14 +361,20 @@ class receiver implements Runnable {
 
 	@Override
 	public void run(){
-		while(true){
-			try{
-				client.recv();
+		while(client.waiting4ack!=true){
+			synchronized(client){
+				try{
+						client.recv();
+				}
+				catch(Exception ex){
+					if(ex.equals(SocketTimeoutException)){
+						System.out.println("This receiver is interupted by wating for receiving ACK!...")
+						System.out.println("Start wait() until being notified!...");
+						client.wait();
+						System.out.println("I am notified, start receiving for regular massage!...");
+					}
+				}
 			}
-			catch(Exception ex){
-				System.out.println(String.valueOf(ex));
-			}
-
 			System.out.print("receiver>>> ");
 		}
 	}
@@ -303,6 +426,7 @@ public class UdpChat{
 			  // start client
 			  UdpChatClient client = new UdpChatClient(client_port,server_ip,server_port,nick_name);
 			  System.out.println("check client ds status:"+String.valueOf(client.ds.getInetAddress())+client.ds.getPort());
+			  // send register message to server
 			  client.send(nick_name+"#"+client.getIP()+"#"+client_port,server_ip,server_port);
 			  // System.out.println(client.recv());
 			  System.out.print(">>> [Welcome. You are registered.]\n");
