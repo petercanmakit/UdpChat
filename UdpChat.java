@@ -8,7 +8,13 @@ class UdpChatServer{
 	DatagramSocket ds;
 	UdpChatServer(int portNumber) throws Exception{
 		port = portNumber;
-		ds = new DatagramSocket(port);
+		try{
+			ds = new DatagramSocket(port);
+		}
+		catch (Exception e) {
+			System.out.println(String.valueOf(e));
+		}
+
 	}
 
 	public  void send(String content, String ip_str, int client_port) throws Exception{
@@ -28,12 +34,12 @@ class UdpChatServer{
 				String user_status = clients.get(nick_name).get(2);
 				if(user_status.equals("off"))
 					continue;
-				//System.out.println(nick_name);
+				System.out.println(nick_name);
 				String user_ip = clients.get(nick_name).get(0);
-				//System.out.println(user_ip);
+				System.out.println(user_ip);
 				int user_port = Integer.valueOf(clients.get(nick_name).get(1));
-				//System.out.println(user_port);
-				//System.out.println(clients.toString());
+				System.out.println(user_port);
+				System.out.println(clients.toString());
 				this.send(clients.toString(),user_ip,user_port);
 			}
 		}
@@ -41,9 +47,9 @@ class UdpChatServer{
 
 	public void register(String info) throws Exception {
 		String[] in = info.split("#");
-		//System.out.println(in[0]);
-		//System.out.println(in[1]);
-		//System.out.println(in[2]);
+		System.out.println(in[0]);
+		System.out.println(in[1]);
+		System.out.println(in[2]);
 		String nick_name = in[0];
 		String clnt_ip = in[1];
 		String clnt_port = in[2];
@@ -60,11 +66,13 @@ class UdpChatServer{
 
 	public void recv_register() throws Exception {
 		byte[] buf = new byte[1024];
+		System.out.println("before in the register()");
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
-		//System.out.println("in the register()");
+		System.out.println("in the register()");
 	    ds.receive(dp);
+		System.out.println("after in the register()");
 	    String info = new String(dp.getData(), 0, dp.getLength());
-		//System.out.println(info);
+		System.out.println(info);
 		this.register(info);
 	}
 
@@ -106,7 +114,15 @@ class UdpChatClient{
 		port = portNumber;
 		server_port = serverPort;
 		nick_name = nname;
-		ds = new DatagramSocket(port);
+		try{
+			ds = new DatagramSocket(port);
+		}
+		catch (Exception e) {
+			System.out.println(String.valueOf(e));
+			System.exit(1);
+		}
+
+		System.out.println("Client info: nick_name: "+nick_name+" serverIp "+server_ip+" server_port "+server_port+" client_port "+port);
 	}
 
 	public void destroy(){
@@ -120,7 +136,7 @@ class UdpChatClient{
 		str = str.replace("}","");
 		str = str.replaceAll("\\s","");
 		//String [] strs = str.split("=[|],");
-		//System.out.println(str);
+		System.out.println(str);
 		String [] strs = str.split("\\],|=\\[");
 
 		for(int i =0;i<strs.length;i=i+2){
@@ -138,7 +154,10 @@ class UdpChatClient{
 	    ds.receive(dp);
 		System.out.println("Receiving!");
 		String str = new String(dp.getData(), 0, dp.getLength());
-		if(dp.getAddress().equals(server_ip) && dp.getPort()==this.server_port){
+		System.out.println(str);
+		System.out.println(dp.getAddress().toString());
+		System.out.println(dp.getPort());
+		if(dp.getAddress().toString().replace("/","").equals(server_ip) && dp.getPort()==this.server_port){
 			// this packet is from server
 			updateClients(str);
 			System.out.println(">>> [Client table updated.]");
@@ -255,7 +274,6 @@ public class UdpChat{
 		  }
 		  else{
 			  int port = Integer.valueOf(args[1]);
-			  System.out.println(port);
 			  System.out.println("Server port is: "+port);
 			  // start server with port
 			  UdpChatServer server = new UdpChatServer(port);
@@ -284,8 +302,9 @@ public class UdpChat{
 			  					"\nserver-port is "+server_port+"\nclient-port is "+client_port);
 			  // start client
 			  UdpChatClient client = new UdpChatClient(client_port,server_ip,server_port,nick_name);
+			  System.out.println("check client ds status:"+String.valueOf(client.ds.getInetAddress())+client.ds.getPort());
 			  client.send(nick_name+"#"+client.getIP()+"#"+client_port,server_ip,server_port);
-			  //System.out.println(client.recv());
+			  // System.out.println(client.recv());
 			  System.out.print(">>> [Welcome. You are registered.]\n");
 
 			  System.out.print(">>> ");
