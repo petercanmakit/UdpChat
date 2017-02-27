@@ -168,7 +168,9 @@ class UdpChatClient{
 
 	}
 
-	public String recv() throws Exception{
+	public String recv() throws Exception{	// 从socket 中读一个 packet出来， 阻塞函数
+											// 若来自 server 则更新clients table 并返回 null
+											// 若来自 其他client 则 return msg as a String
 		byte[] buf = new byte[1024];
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
 	    ds.receive(dp);
@@ -181,7 +183,12 @@ class UdpChatClient{
 			// this packet is from server
 			updateClients(str);
 			System.out.println(">>> [Client table updated.]");
+			return null;
 		}
+
+		return str;
+	}
+		/*
 		else if( !str.equals("ACK") ) {
 			// this packet is from other client
 			// TODO send ack
@@ -208,6 +215,16 @@ class UdpChatClient{
 		}
 		return str;
 
+	}
+	*/
+
+	public String read_msg_from_Q() {
+		Stirng res;
+		synchronized(messageQ){
+			if(!messageQ.isEmpty()){
+				res = messageQ.poll();
+			}
+		}
 	}
 
 	public  void send(String content, String ip_str, int port) throws Exception{
@@ -379,7 +396,8 @@ class sender implements Runnable {
 	}
 }
 
-class receiver implements Runnable {
+class receiver implements Runnable {	// keeps receiving from socket and put msg into messageQ
+										// synchronized
 	UdpChatClient client;
 	int mutex;
 	public receiver(UdpChatClient cc, int mm){
@@ -390,37 +408,52 @@ class receiver implements Runnable {
 	@Override
 	public void run(){
 		while(true){
-
-			try{
-				client.recv();
-			}
-			catch(SocketException ex){
-				System.out.println("This receiver is interupted by wating for receiving ACK!...");
-				System.out.println("Start wait() until being notified!...");
-				synchronized(client){
-					try{
-						client.wait();
-					}
-					catch (Exception eeee) {
-						eeee.printStackTrace();
-					}
-
+			String msg = client.recv();
+			synchronized(client.messageQ){
+				if(msg!=null){
+					client.messageQ.add(msg);
 				}
-				System.out.println("I am notified, start receiving for regular massage!...");
-				continue;
 			}
-			catch (Exception e) {
-				e.printStackTrace();
-			}
-			System.out.print("receiver>>> ");
 		}
+	}
+}
 
+class printer implements Runnable {		// keeps reading from messageQ
+										// if is ordinary message print out
+										// if is ACK, wait until main notify
+	UdpChatClient client;
+	int mutex;
+	public printer(UdpChatClient cc, int mm){
+		this.client = cc;
+		this.mutex = mm;
+	}
+
+	@Override
+	public void run(){
+		synchronized (client.messageQ){
+			while(!client.messageQ.isEmpty()){
+				String msg = client.messageQ.peek();
+				if(!msg.equals("ACK")){ // ordinary message
+					client.messageQ.remove();
+					System.out.println(msg);
+					System.out.print("receiver>>> ");
+				}
+				else{	// ACK
+					try{
+						client.messageQ.wait();
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
 	}
 }
 
 
+//***************************MAIN FUNCTION**************************************//
 public class UdpChat{
-
 	public static void main(String[] args) throws Exception {
       // UdpChat <mode> <command-line arguments>
 	  if(args.length<2){
@@ -473,11 +506,14 @@ public class UdpChat{
 			  int mutex = 1;
 			  Thread t_sender = new Thread(new sender(client,mutex));
 			  Thread t_receiver = new Thread(new receiver(client,mutex));
+			  Thread t_printer = new Thread(new printer(client,mutex));
 			  t_sender.start();
 			  t_receiver.start();
+			  t_printer.start();
 
 			  t_sender.join();
 			  t_receiver.join();
+			  t_printer.join();
 			  client.destroy();
 		  }
 	  }
