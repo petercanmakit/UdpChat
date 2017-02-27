@@ -125,6 +125,7 @@ class UdpChatClient{
 	int server_port;
 	DatagramSocket ds;
 	SocketAddress sock_addr;
+	// initialize
 	UdpChatClient(int portNumber, String serverIP, int serverPort, String nname) throws Exception{
 		server_ip = serverIP;
 		port = portNumber;
@@ -142,7 +143,6 @@ class UdpChatClient{
 
 		System.out.println("Client info: nick_name: "+nick_name+" serverIp "+server_ip+" server_port "+server_port+" client_port "+port);
 	}
-
 
 
 	public void destroy(){
@@ -168,9 +168,10 @@ class UdpChatClient{
 
 	}
 
-	public String recv() throws Exception{	// 从socket 中读一个 packet出来， 阻塞函数
-											// 若来自 server 则更新clients table 并返回 null
-											// 若来自 其他client 则 return msg as a String
+	// 从socket 中读一个 packet出来， 阻塞函数
+	// 若来自 server 则更新clients table 并返回 null
+	// 若来自 其他client 则 return msg as a String
+	public String recv() throws Exception{
 		byte[] buf = new byte[1024];
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
 	    ds.receive(dp);
@@ -255,44 +256,34 @@ class UdpChatClient{
 		// wait 500 msec for ack
 
 		//String wait = new String("NAK");
-		ackBck();
 
 		TimerTask task = new TimerTask() {
       		@Override
       		public void run() {
 				System.out.println("Waiting for ACK");
 	        	// task to run goes here
-				String wait = new String("NAK");
-				try{
-					System.out.println("Waiting for ACK in try");
-					// TODO send signal to thread to pause recv in thread
-					// ds.setSoTimeout(5);
-					// ds.close(); // cause thread to SocketException
+				synchronized (messageQ){
 					try{
-						ds = new DatagramSocket(sock_addr);
+						messageQ.wait();
 					}
 					catch (Exception e) {
 						e.printStackTrace();
-						System.exit(1);
 					}
-					System.out.println("socket re opened!");
-
-					// this.notify();
-					wait = recv();
-					System.out.println("wait is "+ wait);
-				}
-				catch (Exception e) {
-					e.printStackTrace();
-				}
-				if(wait.equals("ACK")) {
-					System.out.println("ack status is " + ack_status);
-					ackGot();
-					System.out.println("ack status is " + ack_status);
-					// TODO cancel sleeper
+					String wait = messageQ.poll();
+					if(wait.equals("ACK")){
+						System.out.println("ack status is " + ack_status);
+						System.out.println("wait is "+ wait);
+						ackGot();
+						System.out.println("ack status is " + ack_status);
+						messageQ.notify();
+					}
 				}
 	        	System.out.println("Hello from the timer task!!!");
 	      	}
     	};
+
+		ackBck();
+		System.out.println("before timer starts ack status is " + ack_status);
     	Timer timer_4_ACK = new Timer();
     	long delay = 0;
     	long inteval = 2500; //msec
@@ -305,10 +296,9 @@ class UdpChatClient{
 			e.printStackTrace();
 			System.exit(1);
 		}
+		System.out.println("after timer ends ack status is " + ack_status);
 
 		// TODO time out send to server
-
-		System.out.println("before checking ack status is " + ack_status);
 
 		if(ack_status.equals("ACK")){
 			System.out.println("wait finished ");
@@ -328,11 +318,7 @@ class UdpChatClient{
 				System.out.println(e);
 				System.exit(1);
 			}
-
 			System.out.println("[No ACK from " + user_recver +", message sent to server.]\n>>> ");
-		}
-		synchronized (this){
-			this.notify();
 		}
 
 	}
@@ -357,7 +343,7 @@ class UdpChatClient{
 
 }
 
-// sender and receiver threads
+// sender and receiver and printer threads
 class sender implements Runnable {
 	UdpChatClient client;
 	int mutex;
