@@ -117,7 +117,7 @@ class UdpChatClient{
 
 	Hashtable<String,ArrayList<String>> clients = new Hashtable<String,ArrayList<String>>();
 
-	Queue<String> messageQ = new LinkedList<Stirng>();
+	Queue<String> messageQ = new LinkedList<String>();
 
 	String nick_name;
 	int port;
@@ -220,12 +220,15 @@ class UdpChatClient{
 	*/
 
 	public String read_msg_from_Q() {
-		Stirng res;
+		String res;
 		synchronized(messageQ){
 			if(!messageQ.isEmpty()){
 				res = messageQ.poll();
 			}
+			else
+				res = null;
 		}
+		return res;
 	}
 
 	public  void send(String content, String ip_str, int port) throws Exception{
@@ -394,7 +397,13 @@ class receiver implements Runnable {	// keeps receiving from socket and put msg 
 	@Override
 	public void run(){
 		while(true){
-			String msg = client.recv();
+			String msg = null;
+			try{
+				msg = client.recv();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
 			synchronized(client.messageQ){
 				if(msg!=null){
 					client.messageQ.add(msg);
