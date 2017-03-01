@@ -85,15 +85,40 @@ class UdpChatServer{
 			String clnt_port = in[2];
 			String clnt_status = new String("on");
 			if(clients.containsKey(nick_name)){
-				// send back registration failure
+				//
 				if(clients.get(nick_name).get(2).equals("off")){
+					// this one comes back
 					clients.get(nick_name).set(2,"on");
 					clients.get(nick_name).set(0,clnt_ip);
 					clients.get(nick_name).set(1,clnt_port);
 					broadcast();
+					// check if there are off line mesg for this one
+					System.out.println(off_line_msgs.get(nick_name).toString());
+					if(off_line_msgs.containsKey(nick_name)){
+						try{
+							send("offMsgSending#"+"[You have messages]", clnt_ip, Integer.valueOf(clnt_port));
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+						}
+						ArrayList<String> msg2send = off_line_msgs.get(nick_name);
+						off_line_msgs.remove(nick_name); 
+						for(String str : msg2send){
+							try{
+								send("offMsgSending#"+str, clnt_ip, Integer.valueOf(clnt_port));
+							}
+							catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					}
 				}
-				else{	// clients has this usr but is already online
-					// TODO tell the client already logged on
+				else {	// clients has this usr, change ip and port
+					//
+					clients.get(nick_name).set(2,"on");
+					clients.get(nick_name).set(0,clnt_ip);
+					clients.get(nick_name).set(1,clnt_port);
+					broadcast();
 				}
 			}
 			else{
@@ -258,8 +283,10 @@ class UdpChatClient{
 		System.out.println(dp.getPort());
 		if(dp.getAddress().toString().replace("/","").equals(server_ip) && dp.getPort()==this.server_port){
 			// this packet is from server
-			if(str.equals("offACK") || str.equals("offMsgACK") || str.startsWith("offMsgERR#")){
-				return str; 
+			if(str.equals("offACK") || str.equals("offMsgACK") ||
+				str.startsWith("offMsgERR#") || str.startsWith("offMsgSending#"))
+			{
+				return str;
 			}
 			else{
 				updateClients(str);
@@ -611,7 +638,8 @@ class printer implements Runnable {		// keeps reading from messageQ
 					// System.out.println("Q empty? : "+ client.messageQ.isEmpty());
 					String msg = client.messageQ.poll();
 					if(!msg.equals("ACK") && !msg.equals("offACK")
-						&& !msg.equals("offMsgACK") && !msg.startsWith("offMsgERR")){ // ordinary message
+						&& !msg.equals("offMsgACK") && !msg.startsWith("offMsgERR")
+						&& !msg.startsWith("offMsgSending#")){ // ordinary message
 						System.out.println(msg);
 						String back_name = msg.split(":\\s+")[0];
 						String back_ip = client.clients.get(back_name).get(0);
@@ -652,6 +680,10 @@ class printer implements Runnable {		// keeps reading from messageQ
 						String err_usrname = msg.split("#")[1];
 						System.out.println("[Client "+err_usrname+" exists!!]");
 						System.out.println("[Maybe "+err_usrname+"\'s PC is down...]");
+					}
+					else if(msg.startsWith("offMsgSending#")){
+						String offmsg = msg.split("#")[1];
+						System.out.println(offmsg);
 					}
 				}
 			}
