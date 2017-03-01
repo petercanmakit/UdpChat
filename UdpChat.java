@@ -361,7 +361,7 @@ class UdpChatClient{
 
 		sock_addr = ds.getLocalSocketAddress();
 
-		System.out.println("Client info: nick_name: "+nick_name+" serverIp "+server_ip+" server_port "+server_port+" client_port "+port);
+		// System.out.println("Client info: nick_name: "+nick_name+" serverIp "+server_ip+" server_port "+server_port+" client_port "+port);
 	}
 
 
@@ -509,7 +509,7 @@ class UdpChatClient{
 		if(ack_status){	// got ack
 			// System.out.println("ack status is " + ack_status);
 			ackBck();
-			System.out.println("[Message received by " + user_recver + ".]");
+			System.out.println(">>> [Message received by " + user_recver + ".]");
 
 		}
 		else { // NAK
@@ -587,7 +587,7 @@ class UdpChatClient{
 
 		}
 		else{
-			System.out.print("[Server not responding]\n>>> [Exiting]\n");
+			System.out.print(">>> [Server not responding]\n>>> [Exiting]\n");
 			System.exit(0);
 		}
      	// schedules the task to be run in an interval
@@ -611,7 +611,7 @@ class sender implements Runnable { // including sending deRegisteration to serve
 			Scanner sc = new Scanner(System.in);
 			String line = sc.nextLine();
 			// System.out.println(line);
-			String[] usr_in = line.split("\\s+",4);
+			String[] usr_in = line.split("\\s+",3);
 
 			// System.out.println(usr_in[0]);
 			if(usr_in[0].equals("send")){
@@ -827,7 +827,7 @@ class printer implements Runnable {		// keeps reading from messageQ
 					System.out.print(">>> ");
 				}
 				else { // ordinary message
-					
+
 					System.out.println(msg);
 					System.out.print(">>> ");
 					String back_name = msg.split(":\\s+")[0];

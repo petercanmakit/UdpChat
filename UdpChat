@@ -1,0 +1,10 @@
+#!/bin/bash
+# make_page - A script to run UdpChat
+
+set -e
+
+if [[ $# == 2 ]]; then
+	java UdpChat $1 $2
+elif [[ condition ]]; then
+	java UdpChat $1 $2 $3 $4 $5
+fi
