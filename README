@@ -1,4 +1,4 @@
-Jiajun Zhang UNI: z2793
+Jiajun Zhang, UNI: jz2793
 
 UdpChat: Command line instructions
 
@@ -6,6 +6,7 @@ UdpChat: Command line instructions
 
 		make
 
+	After compiling, there is a simple bash script which allows run the output file without "java" command.
 2. Start Server:
 
 		./UdpChat -s <port>
@@ -116,3 +117,7 @@ e.g.:
 	\>>> [Messages received by the server and saved]
 
 	Server ping to peter, but receives no pingACK. So the status of peter is set to "off", and the server saved the former message as an offline message. And tell zjj that it saved it for him.
+
+	3.4 Other features:
+
+	If one user log in using another different PC (with different ip and/or port), it will just update the table so that everyone knows the updated contact information. It seams the nikc-name is the key to login.
