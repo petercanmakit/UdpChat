@@ -1,4 +1,6 @@
 // message content cannot contain "#"
+// message content cannot contain ","
+// TODO fix these if have time
 import java.net.*;
 import java.util.*;
 import java.text.DateFormat;
@@ -108,15 +110,28 @@ class UdpChatServer{
 			String from_usr = in[1];
 			String to_usr = in[2];
 			String msg_str = in[3];
-			String msg_new = from_usr+":  "+get_time_now()+"  "+msg_str.split(":\\s+")[1];
-			if(off_line_msgs.containsKey(to_usr)){
-				off_line_msgs.get(to_usr).add(msg_new);
+			String to_usr_status = clients.get(to_usr).get(2);
+			if(to_usr_status.equals("off")){
+				// to_usr is off save this offline mesg
+				String msg_new = from_usr+":  "+get_time_now()+"  "+msg_str.split(":\\s+")[1];
+				if(off_line_msgs.containsKey(to_usr)){
+					off_line_msgs.get(to_usr).add(msg_new);
+				}
+				else{
+					off_line_msgs.put(to_usr, new ArrayList<String>(Arrays.asList(msg_new)));
+				}
+				System.out.println("off line msg table updated!");
+				System.out.println(off_line_msgs.toString());
+				// and send offMsgACK
+				send("offMsgACK", clients.get(from_usr).get(0),
+									Integer.valueOf(clients.get(from_usr).get(1)));
 			}
 			else{
-				off_line_msgs.put(to_usr, new ArrayList<String>(Arrays.asList(msg_new)));
+				// to_usr is on, send err mesg to from_usr
+				send("offMsgERR#"+to_usr, clients.get(from_usr).get(0),
+									Integer.valueOf(clients.get(from_usr).get(1)));
 			}
-			System.out.println("off line msg table updated!");
-			System.out.println(off_line_msgs.toString());
+
 		}
 		else if(in.length==2 && in[0].equals("off_l")) {	// if receive deregistration:
 			// msg_str format off_l#<usr_name>
@@ -220,10 +235,11 @@ class UdpChatClient{
 
 		for(int i =0;i<strs.length;i=i+2){
 			String nick_name = strs[i];
-			String tmp = strs[i+1];
+			String tmp = strs[i+1].replace("]","");
 			String[] ipNport = tmp.split(",");
 			clients.put(nick_name,new ArrayList<String>(Arrays.asList(ipNport)));
 		}
+		System.out.println(clients.toString());
 
 	}
 
@@ -242,8 +258,8 @@ class UdpChatClient{
 		System.out.println(dp.getPort());
 		if(dp.getAddress().toString().replace("/","").equals(server_ip) && dp.getPort()==this.server_port){
 			// this packet is from server
-			if(str.equals("offACK")){
-				messageQ.add(str);
+			if(str.equals("offACK") || str.equals("offMsgACK") || str.startsWith("offMsgERR#")){
+				return str; 
 			}
 			else{
 				updateClients(str);
@@ -336,7 +352,7 @@ class UdpChatClient{
 		}
 		else { // NAK
 			timer_4_ACK.cancel();
-			System.out.println("Timer canceled!");
+			// System.out.println("Timer canceled!");
 			// send to server as an off-line message
 			// format: off_m#<from_usr>#<to_usr>#<msg_str>
 			try{
@@ -347,7 +363,8 @@ class UdpChatClient{
 				System.out.println(e);
 				System.exit(1);
 			}
-			System.out.println("[No ACK from " + user_recver +", message sent to server.]\n>>> ");
+			System.out.print("[No ACK from " + user_recver +", message sent to server.]\n>>> ");
+
 		}
 
 	}
@@ -440,16 +457,39 @@ class sender implements Runnable { // including sending deRegisteration to serve
 			// System.out.println(usr_in[0]);
 			if(usr_in[0].equals("send")){
 
-				String name = usr_in[1];
-				String message = usr_in[2];
+				String name = usr_in[1]; 	// intend receiver name
+				String message = usr_in[2];	// intend sending msg
 
 				System.out.println(client.clients.toString());
-				try{
-					client.send_P2P(client.nick_name+":  "+message, name);
+				System.out.println("intedn status is "+client.clients.get(name).get(2));
+				String intend_status = client.clients.get(name).get(2);
+				System.out.println("intedn status equals on? : "+ intend_status.equals("on"));
+				System.out.println(intend_status+intend_status+intend_status);
+				if(client.clients.get(name).get(2).equals("on")){
+				// if(true){
+					System.out.println("get into try send_P2P");
+					// if the intend receiver is online send it by P2P
+					try{
+						client.send_P2P(client.nick_name+":  "+message, name);
+					}
+					catch(Exception ex){
+						ex.printStackTrace();
+					}
 				}
-				catch(Exception ex){
-					ex.printStackTrace();
+				else if(client.clients.get(name).get(2).equals("off")){
+					// the intend receiver is offline send it to server as offline msg
+					try{
+						client.send("off_m#"+ client.nick_name + "#" + name + "#" +
+									client.nick_name + ":  " + message,
+									client.server_ip, client.server_port);
+					}
+					catch (Exception e) {
+						System.out.println(e);
+						System.exit(1);
+					}
+
 				}
+
 			}
 			else if(usr_in[0].equals("dereg")){ //
 				if(usr_in.length==1 || usr_in[1].equals(client.nick_name)){
@@ -562,14 +602,16 @@ class printer implements Runnable {		// keeps reading from messageQ
 
 			}
 			while(!client.messageQ.isEmpty()){
+				System.out.println("I am in while!");
 				// System.out.println("printer keeps working synchronized!");
 				// synchronized (client.messageQ){
 				// System.out.println("Get in to while loop in printer!");
 				if(true){
 					// System.out.println("printer keeps working! while loop");
 					// System.out.println("Q empty? : "+ client.messageQ.isEmpty());
-					String msg = client.messageQ.remove();
-					if(!msg.equals("ACK") && !msg.equals("offACK")){ // ordinary message
+					String msg = client.messageQ.poll();
+					if(!msg.equals("ACK") && !msg.equals("offACK")
+						&& !msg.equals("offMsgACK") && !msg.startsWith("offMsgERR")){ // ordinary message
 						System.out.println(msg);
 						String back_name = msg.split(":\\s+")[0];
 						String back_ip = client.clients.get(back_name).get(0);
@@ -602,6 +644,14 @@ class printer implements Runnable {		// keeps reading from messageQ
 						catch (Exception e) {
 							e.printStackTrace();
 						}
+					}
+					else if(msg.equals("offMsgACK")) {
+						System.out.println("[Messages received by the server and saved]");
+					}
+					else if(msg.startsWith("offMsgERR")) {
+						String err_usrname = msg.split("#")[1];
+						System.out.println("[Client "+err_usrname+" exists!!]");
+						System.out.println("[Maybe "+err_usrname+"\'s PC is down...]");
 					}
 				}
 			}
