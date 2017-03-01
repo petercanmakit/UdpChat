@@ -183,7 +183,7 @@ class UdpChatServer{
 				else{
 					off_line_msgs.put(to_usr, new ArrayList<String>(Arrays.asList(msg_new)));
 				}
-				System.out.println("off line msg table updated!");
+				// System.out.println("off line msg table updated!");
 				System.out.println(off_line_msgs.toString());
 				// and send offMsgACK
 				send("offMsgACK", clients.get(from_usr).get(0),
@@ -205,7 +205,7 @@ class UdpChatServer{
 			// deregister and reregister
 		}
 
-		System.out.println("after in register()");
+		// System.out.println("after in register()");
 	}
 
 	public String recv_register() throws Exception {
@@ -303,7 +303,7 @@ class serverHandler implements Runnable {		// keeps reading from messageQ
 
 			}
 			while(!server.messageQ.isEmpty()){
-				System.out.println("I am in while!");
+				// System.out.println("I am in while!");
 				// System.out.println("printer keeps working synchronized!");
 				// synchronized (client.messageQ){
 				// System.out.println("Get in to while loop in printer!");
@@ -376,8 +376,8 @@ class UdpChatClient{
 		str = str.replace("{","");
 		str = str.replace("}","");
 		str = str.replaceAll("\\s","");
-		//String [] strs = str.split("=[|],");
-		System.out.println(str);
+		// String [] strs = str.split("=[|],");
+		// System.out.println(str);
 		String [] strs = str.split("\\],|=\\[");
 
 		for(int i =0;i<strs.length;i=i+2){
@@ -386,8 +386,19 @@ class UdpChatClient{
 			String[] ipNport = tmp.split(",");
 			clients.put(nick_name,new ArrayList<String>(Arrays.asList(ipNport)));
 		}
-		System.out.println(clients.toString());
+		System.out.print("[Client table updated.]\n>>> ");
+		printClinetsTable();
 
+	}
+
+	public void printClinetsTable(){
+		// System.out.println(clients.toString());
+		Enumeration enu = clients.keys();
+		while(enu.hasMoreElements()){
+			String usr_name = enu.nextElement().toString();
+			System.out.print("[ "+usr_name + ": " + clients.get(usr_name).get(2)+" ]\t");
+		}
+		System.out.print("\n");
 	}
 
 	// 从socket 中读一个 packet出来， 阻塞函数
@@ -397,12 +408,12 @@ class UdpChatClient{
 		byte[] buf = new byte[1024];
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
 	    ds.receive(dp);
-		System.out.println("Receiving!");
+		// System.out.println("Receiving!");
 		String str = new String(dp.getData(), 0, dp.getLength());
 
-		//System.out.println(str);
-		System.out.println(dp.getAddress().toString());
-		System.out.println(dp.getPort());
+		// System.out.println(str);
+		// System.out.println(dp.getAddress().toString());
+		// System.out.println(dp.getPort());
 		if(dp.getAddress().toString().replace("/","").equals(server_ip) && dp.getPort()==this.server_port){
 			// this packet is from server
 			if(str.equals("offACK") || str.equals("offMsgACK") ||
@@ -413,7 +424,8 @@ class UdpChatClient{
 			}
 			else{
 				updateClients(str);
-				System.out.println(">>> [Client table updated.]");
+				// System.out.println(">>> [Client table updated.]");
+				System.out.print(">>> ");
 				return null;
 			}
 		}
@@ -470,7 +482,7 @@ class UdpChatClient{
 		TimerTask task = new TimerTask() {
       		@Override
       		public void run() {
-				System.out.println("Waiting for ACK");
+				// System.out.println("Waiting for ACK");
 	        	// task to run goes here
 				while(!ack_status){}		// wait for notifying
 				// got an ACK
@@ -498,7 +510,7 @@ class UdpChatClient{
 		if(ack_status){	// got ack
 			// System.out.println("ack status is " + ack_status);
 			ackBck();
-			System.out.println("[Message received by " + user_recver + ".]\n>>> ");
+			System.out.println("[Message received by " + user_recver + ".]");
 		}
 		else { // NAK
 			timer_4_ACK.cancel();
@@ -513,14 +525,14 @@ class UdpChatClient{
 				System.out.println(e);
 				System.exit(1);
 			}
-			System.out.print("[No ACK from " + user_recver +", message sent to server.]\n>>> ");
+			System.out.print(">>> [No ACK from " + user_recver +", message sent to server.]\n");
 
 		}
 
 	}
 
 	public String getIP() {
-		// http://hanchaohan.blog.51cto.com/2996417/793377
+		// cite from http://hanchaohan.blog.51cto.com/2996417/793377
           String ip;
           try {
                /**返回本地主机。*/
@@ -551,8 +563,8 @@ class UdpChatClient{
      	long inteval = 500; //msec
 
 		for(int i = 0; i<5 ;i++){
-			System.out.println(i);
-			System.out.println("offACK_status is "+String.valueOf(offACK_status));
+			// System.out.println(i);
+			// System.out.println("offACK_status is "+String.valueOf(offACK_status));
 
 			try{	// send to server
    			 	send("off_l#"+nick_name, server_ip, server_port );
@@ -571,8 +583,8 @@ class UdpChatClient{
 		}
 		if(offACK_status){
 			backOffACK();
-			System.out.println(" [You are Offline. Bye.]");
-			System.out.print(">>>");
+			System.out.println(">>> [You are Offline. Bye.]");
+
 		}
 		else{
 			System.out.print("[Server not responding]\n>>> [Exiting]\n");
@@ -598,56 +610,63 @@ class sender implements Runnable { // including sending deRegisteration to serve
 		while(true){
 			Scanner sc = new Scanner(System.in);
 			String line = sc.nextLine();
-			System.out.println(line);
+			// System.out.println(line);
 			String[] usr_in = line.split("\\s+",4);
 
-			for(int i =0;i<usr_in.length;i++){
-				System.out.println(usr_in[i]);
-			}
 			// System.out.println(usr_in[0]);
 			if(usr_in[0].equals("send")){
 
 				String name = usr_in[1]; 	// intend receiver name
-				String message = usr_in[2];	// intend sending msg
+				if(client.clients.containsKey(name)){
+					String message = usr_in[2];	// intend sending msg
 
-				System.out.println(client.clients.toString());
-				System.out.println("intedn status is "+client.clients.get(name).get(2));
-				String intend_status = client.clients.get(name).get(2);
-				System.out.println("intedn status equals on? : "+ intend_status.equals("on"));
-				System.out.println(intend_status+intend_status+intend_status);
-				if(client.clients.get(name).get(2).equals("on")){
-				// if(true){
-					System.out.println("get into try send_P2P");
-					// if the intend receiver is online send it by P2P
-					try{
-						client.send_P2P(client.nick_name+":  "+message, name);
+					//System.out.println(client.clients.toString());
+					// System.out.println("intedn status is "+client.clients.get(name).get(2));
+					String intend_status = client.clients.get(name).get(2);
+					// System.out.println("intedn status equals on? : "+ intend_status.equals("on"));
+					// System.out.println(intend_status+intend_status+intend_status);
+					if(client.clients.get(name).get(2).equals("on")){
+					// if(true){
+						// System.out.println("get into try send_P2P");
+						// if the intend receiver is online send it by P2P
+						try{
+							client.send_P2P(client.nick_name+":  "+message, name);
+						}
+						catch(Exception ex){
+							ex.printStackTrace();
+						}
 					}
-					catch(Exception ex){
-						ex.printStackTrace();
+					else if(client.clients.get(name).get(2).equals("off")){
+						// the intend receiver is offline send it to server as offline msg
+						try{
+							client.send("off_m#"+ client.nick_name + "#" + name + "#" +
+										client.nick_name + ":  " + message,
+										client.server_ip, client.server_port);
+						}
+						catch (Exception e) {
+							System.out.println(e);
+							System.exit(1);
+						}
+
 					}
+
 				}
-				else if(client.clients.get(name).get(2).equals("off")){
-					// the intend receiver is offline send it to server as offline msg
-					try{
-						client.send("off_m#"+ client.nick_name + "#" + name + "#" +
-									client.nick_name + ":  " + message,
-									client.server_ip, client.server_port);
-					}
-					catch (Exception e) {
-						System.out.println(e);
-						System.exit(1);
-					}
 
+				else{
+					// table not contain this user
+					System.out.print(">>> [Client " + name + " does not exist. Check the client table below: ]\n");
+					client.printClinetsTable();
 				}
-
 			}
-			else if(usr_in[0].equals("dereg")){ //
-				if(usr_in.length==1 || usr_in[1].equals(client.nick_name)){
+			else if(usr_in[0].equals("dereg")){
+				if(usr_in.length==1){
 					client.deRegister();
 				}
+				else if(!usr_in[1].equals(client.nick_name)){
+					System.out.println(">>> [You cannot dereg user other than youself...]");
+				}
 				else{
-					System.out.println("You cannot dereg user other than youself...");
-					System.out.print(">>> ");
+					client.deRegister();
 				}
 			}
 			else if(usr_in[0].equals("reg")){
@@ -660,13 +679,15 @@ class sender implements Runnable { // including sending deRegisteration to serve
 					catch (Exception e) {
 						e.printStackTrace();
 					}
-
+				}
+				else if(usr_in.length>1){
+					System.out.println(">>> [You cannot register user other than youself...]");
 				}
 			}
 			else{
 				System.out.println("Usage: send <name> <message>");
 			}
-			System.out.print("sender>>> ");
+			System.out.print(">>> ");
 		}
 	}
 }
@@ -749,7 +770,7 @@ class printer implements Runnable {		// keeps reading from messageQ
 
 			}
 			while(!client.messageQ.isEmpty()){
-				System.out.println("I am in while!");
+				// System.out.println("I am in while!");
 				// System.out.println("printer keeps working synchronized!");
 				// synchronized (client.messageQ){
 				// System.out.println("Get in to while loop in printer!");
@@ -760,7 +781,7 @@ class printer implements Runnable {		// keeps reading from messageQ
 				if(msg.equals("pingDead")){
 					try{
 						client.send("pingACK", client.server_ip, client.server_port);
-						System.out.println("I send pingACK to server!");
+						// System.out.println("I send pingACK to server!");
 					}
 					catch (Exception e) {
 						e.printStackTrace();
@@ -777,7 +798,7 @@ class printer implements Runnable {		// keeps reading from messageQ
 					}
 				}
 				else if(msg.equals("offACK")){	// offACK
-					System.out.println("Got an offACK");
+					// System.out.println("Got an offACK");
 					try{
 						client.gotOffACK();
 					}
@@ -787,15 +808,17 @@ class printer implements Runnable {		// keeps reading from messageQ
 				}
 				else if(msg.equals("offMsgACK")) {
 					System.out.println("[Messages received by the server and saved]");
+					System.out.print(">>> ");
 				}
 				else if(msg.startsWith("offMsgERR")) {
 					String err_usrname = msg.split("#")[1];
 					System.out.println("[Client "+err_usrname+" exists!!]");
-					System.out.println("[Maybe "+err_usrname+"\'s PC is down...]");
+					System.out.print(">>> ");
 				}
 				else if(msg.startsWith("offMsgSending#")){
 					String offmsg = msg.split("#")[1];
 					System.out.println(offmsg);
+					System.out.print(">>> ");
 				}
 				else { // ordinary message
 					System.out.println(msg);
@@ -865,11 +888,10 @@ public class UdpChat{
 			  String server_ip = args[2];
 			  int server_port = Integer.valueOf(args[3]);
 			  int client_port = Integer.valueOf(args[4]);
-			  System.out.println("nick-name is "+nick_name+"\nserver-ip is "+server_ip+
-			  					"\nserver-port is "+server_port+"\nclient-port is "+client_port);
+
 			  // start client
 			  UdpChatClient client = new UdpChatClient(client_port,server_ip,server_port,nick_name);
-			  System.out.println("check client ds status:"+String.valueOf(client.ds.getInetAddress())+client.ds.getPort());
+			  // System.out.println("check client ds status:"+String.valueOf(client.ds.getInetAddress())+client.ds.getPort());
 			  // send register message to server
 			  client.send(nick_name+"#"+client.getIP()+"#"+client_port,server_ip,server_port);
 			  // System.out.println(client.recv());
