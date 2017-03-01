@@ -1,5 +1,4 @@
 // message content cannot contain "#"
-// message content cannot contain ","
 // TODO fix these if have time
 import java.net.*;
 import java.util.*;
@@ -615,48 +614,54 @@ class sender implements Runnable { // including sending deRegisteration to serve
 
 			// System.out.println(usr_in[0]);
 			if(usr_in[0].equals("send")){
+				if(usr_in.length<3){
+					System.out.println(">>> Usage: send <name> <message>");
+				}
+				else{	// insert request is correct
+					String name = usr_in[1]; 	// intend receiver name
 
-				String name = usr_in[1]; 	// intend receiver name
-				if(client.clients.containsKey(name)){
-					String message = usr_in[2];	// intend sending msg
+					if(client.clients.containsKey(name)){
+						String message = usr_in[2];	// intend sending msg
 
-					//System.out.println(client.clients.toString());
-					// System.out.println("intedn status is "+client.clients.get(name).get(2));
-					String intend_status = client.clients.get(name).get(2);
-					// System.out.println("intedn status equals on? : "+ intend_status.equals("on"));
-					// System.out.println(intend_status+intend_status+intend_status);
-					if(client.clients.get(name).get(2).equals("on")){
-					// if(true){
-						// System.out.println("get into try send_P2P");
-						// if the intend receiver is online send it by P2P
-						try{
-							client.send_P2P(client.nick_name+":  "+message, name);
+						//System.out.println(client.clients.toString());
+						// System.out.println("intedn status is "+client.clients.get(name).get(2));
+						String intend_status = client.clients.get(name).get(2);
+						// System.out.println("intedn status equals on? : "+ intend_status.equals("on"));
+						// System.out.println(intend_status+intend_status+intend_status);
+						if(client.clients.get(name).get(2).equals("on")){
+						// if(true){
+							// System.out.println("get into try send_P2P");
+							// if the intend receiver is online send it by P2P
+							try{
+								client.send_P2P(client.nick_name+":  "+message, name);
+							}
+							catch(Exception ex){
+								ex.printStackTrace();
+							}
 						}
-						catch(Exception ex){
-							ex.printStackTrace();
+						else if(client.clients.get(name).get(2).equals("off")){
+							// the intend receiver is offline send it to server as offline msg
+							try{
+								client.send("off_m#"+ client.nick_name + "#" + name + "#" +
+											client.nick_name + ":  " + message,
+											client.server_ip, client.server_port);
+							}
+							catch (Exception e) {
+								System.out.println(e);
+								System.exit(1);
+							}
+
 						}
+
 					}
-					else if(client.clients.get(name).get(2).equals("off")){
-						// the intend receiver is offline send it to server as offline msg
-						try{
-							client.send("off_m#"+ client.nick_name + "#" + name + "#" +
-										client.nick_name + ":  " + message,
-										client.server_ip, client.server_port);
-						}
-						catch (Exception e) {
-							System.out.println(e);
-							System.exit(1);
-						}
 
+					else{
+						// table not contain this user
+						System.out.print(">>> [Client " + name + " does not exist. Check the client table below: ]\n>>>");
+						client.printClinetsTable();
 					}
-
 				}
 
-				else{
-					// table not contain this user
-					System.out.print(">>> [Client " + name + " does not exist. Check the client table below: ]\n");
-					client.printClinetsTable();
-				}
 			}
 			else if(usr_in[0].equals("dereg")){
 				if(usr_in.length==1){
@@ -685,7 +690,7 @@ class sender implements Runnable { // including sending deRegisteration to serve
 				}
 			}
 			else{
-				System.out.println("Usage: send <name> <message>");
+				System.out.println(">>> [Usage: You can send/reg/dereg]");
 			}
 			System.out.print(">>> ");
 		}
