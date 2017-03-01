@@ -510,6 +510,7 @@ class UdpChatClient{
 			// System.out.println("ack status is " + ack_status);
 			ackBck();
 			System.out.println("[Message received by " + user_recver + ".]");
+
 		}
 		else { // NAK
 			timer_4_ACK.cancel();
@@ -826,7 +827,9 @@ class printer implements Runnable {		// keeps reading from messageQ
 					System.out.print(">>> ");
 				}
 				else { // ordinary message
+					
 					System.out.println(msg);
+					System.out.print(">>> ");
 					String back_name = msg.split(":\\s+")[0];
 					String back_ip = client.clients.get(back_name).get(0);
 					int back_port = Integer.valueOf(client.clients.get(back_name).get(1));
