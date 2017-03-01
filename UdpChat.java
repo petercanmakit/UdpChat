@@ -1,5 +1,8 @@
+// message content cannot contain "#"
 import java.net.*;
 import java.util.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 class UdpChatServer{
 	Hashtable<String,ArrayList<String>> clients = new Hashtable<String,ArrayList<String>>();
@@ -56,34 +59,71 @@ class UdpChatServer{
 		}
 	}
 
+	public String get_time_now(){
+		DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
+		Date dateobj = new Date();
+		System.out.println(df.format(dateobj));
+		return df.format(dateobj).toString();
+	}
+
+	Hashtable<String,ArrayList<String>> off_line_msgs = new Hashtable<String,ArrayList<String>>();
+	// <nick-name,[msg1,msg2,...]>
+	// msg_str format: off_m#<from_usr>#<to_usr>#<msg_str>#<time>
+
 	public void register(String info) throws Exception {
+		// do registration, or deal with off-line msgs
 		System.out.println("in register()");
 		String[] in = info.split("#");
-		System.out.println(in[0]);
-		System.out.println(in[1]);
-		System.out.println(in[2]);
-		String nick_name = in[0];
-		String clnt_ip = in[1];
-		String clnt_port = in[2];
-		String clnt_status = new String("on");
-		if(clients.containsKey(nick_name)){
-			// TODO send nak
+		if(in.length==3){ // registration
+			System.out.println(in[0]);
+			System.out.println(in[1]);
+			System.out.println(in[2]);
+			String nick_name = in[0];
+			String clnt_ip = in[1];
+			String clnt_port = in[2];
+			String clnt_status = new String("on");
+			if(clients.containsKey(nick_name)){
+				// TODO send back registration failure
+			}
+			else{
+				clients.put(nick_name,new ArrayList(Arrays.asList(clnt_ip,clnt_port,clnt_status)));
+				// broadcast to every user
+				this.broadcast();
+			}
+		}
+		else if(in.length==4 && in[0].equals("off_m")){
+			// if this is a off-line message
+			// save this message to the according table entry
+			// msg_str format: off_m#<from_usr>#<to_usr>
+			// save format: <from_usr>: <time_stamp> <content>
+			String from_usr = in[1];
+			String to_usr = in[2];
+			String msg_str = in[3];
+			String msg_new = from_usr+":  "+get_time_now()+"  "+msg_str.split(":\\s+")[1];
+			if(off_line_msgs.containsKey(to_usr)){
+				off_line_msgs.get(to_usr).add(msg_new);
+			}
+			else{
+				off_line_msgs.put(to_usr, new ArrayList<String>(Arrays.asList(msg_new)));
+			}
+			System.out.println("off line msg table updated!");
+			System.out.println(off_line_msgs.toString());
 		}
 		else{
-			clients.put(nick_name,new ArrayList(Arrays.asList(clnt_ip,clnt_port,clnt_status)));
-			// TODO send ack
-			this.broadcast();
+			// deregister and reregister
 		}
+
 		System.out.println("after in register()");
 	}
 
 	public void recv_register() throws Exception {
+		// to recive message from client, including registration and off-line message
 		byte[] buf = new byte[1024];
-		System.out.println("before in recv_register()");
+		// System.out.println("before in recv_register()");
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
-		System.out.println("in the recv_register()");
+		// System.out.println("in the recv_register()");
 	    ds.receive(dp);
-		System.out.println("after in the recv_register()");
+		// System.out.println("after in the recv_register()");
 	    String info = new String(dp.getData(), 0, dp.getLength());
 		System.out.println(info);
 		this.register(info);
@@ -187,7 +227,7 @@ class UdpChatClient{
 			return null;
 		}
 
-		System.out.println("in recv(): Message from other client!");
+		// System.out.println("in recv(): Message from other client!");
 
 		return str;
 	}
@@ -249,12 +289,12 @@ class UdpChatClient{
 	}
 
 	public void send_P2P(String content, String user_recver) {
-		System.out.println("in send_P2P: user_recver is : "+user_recver);
+		// System.out.println("in send_P2P: user_recver is : "+user_recver);
 		String ip_str = this.clients.get(user_recver).get(0);
 		int port_num = Integer.valueOf(this.clients.get(user_recver).get(1));
 		try{
 			this.send(content,ip_str,port_num);
-			System.out.println("in send_P2P(): message sent to other client!");
+			// System.out.println("in send_P2P(): message sent to other client!");
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -271,11 +311,7 @@ class UdpChatClient{
 	        	// task to run goes here
 				while(!ack_status){}		// wait for notifying
 				// got an ACK
-				System.out.println("ack status is " + ack_status);
-
-				System.out.println("ack status is " + ack_status);
-
-	        	System.out.println("Hello from the timer task!!!");
+				// System.out.println("ack status is " + ack_status);
 	      	}
     	};
 
@@ -292,23 +328,22 @@ class UdpChatClient{
 			e.printStackTrace();
 			System.exit(1);
 		}
-		System.out.println("after timer ends ack status is " + ack_status);
+		// System.out.println("after timer ends ack status is " + ack_status);
 
 		// time out
 		// check ack_status
 		if(ack_status){	// got ack
-			System.out.println("wait finished ");
-			System.out.println("ack status is " + ack_status);
+			// System.out.println("ack status is " + ack_status);
 			ackBck();
-			System.out.println("ack status is " + ack_status);
 			System.out.println("[Message received by " + user_recver + ".]\n>>> ");
 		}
 		else { // NAK
 			timer_4_ACK.cancel();
 			System.out.println("Timer canceled!");
-			// send to server
+			// send to server as an off-line message
+			// format: off_m#<from_usr>#<to_usr>#<msg_str>
 			try{
-				this.send(this.nick_name + "#" + user_recver + "#" + content,
+				this.send("off_m#"+ this.nick_name + "#" + user_recver + "#" + content,
 							this.server_ip, this.server_port);
 			}
 			catch (Exception e) {
@@ -356,18 +391,16 @@ class sender implements Runnable {
 			String line = sc.nextLine();
 			System.out.println(line);
 			String[] usr_in = line.split("\\s+",4);
-			System.out.println("long: "+ usr_in.length);
+
 			for(int i =0;i<usr_in.length;i++){
 				System.out.println(usr_in[i]);
 			}
 			// System.out.println(usr_in[0]);
 			if(usr_in[0].equals("send")){
-				System.out.println(usr_in[1]);
-				System.out.println(usr_in[2]);
+
 				String name = usr_in[1];
 				String message = usr_in[2];
-				System.out.println("in sender: intend is "+name+", content is :"+client.nick_name+":  "+message);
-				System.out.println("Sending");
+
 				System.out.println(client.clients.toString());
 				try{
 					client.send_P2P(client.nick_name+":  "+message, name);
@@ -399,7 +432,7 @@ class receiver implements Runnable {	// keeps receiving from socket and put msg 
 			String msg = null;
 			try{
 				msg = client.recv();
-				System.out.println("in receiver, received message is "+ msg);
+				// System.out.println("in receiver, received message is "+ msg);
 			}
 			catch (Exception e) {
 				e.printStackTrace();
@@ -409,10 +442,9 @@ class receiver implements Runnable {	// keeps receiving from socket and put msg 
 					client.messageQ.add(msg);
 					client.messageQ.notify();
 				}
-
-				System.out.println("in receiver, added to Q");
-				System.out.println("in receiver, peek of Q: "+client.messageQ.peek());
-				System.out.println("in receiver, Q is like: "+client.messageQ.toString());
+				// System.out.println("in receiver, added to Q");
+				// System.out.println("in receiver, peek of Q: "+client.messageQ.peek());
+				// System.out.println("in receiver, Q is like: "+client.messageQ.toString());
 			}
 		}
 	}
@@ -443,7 +475,7 @@ class printer implements Runnable {		// keeps reading from messageQ
 			}
 		}
 		*/
-		System.out.println("printer starts working!");
+		// System.out.println("printer starts working!");
 		while(true){
 			/* for testing
 			System.out.println("Q empty? : "+ client.messageQ.isEmpty());
@@ -468,10 +500,10 @@ class printer implements Runnable {		// keeps reading from messageQ
 			while(!client.messageQ.isEmpty()){
 				// System.out.println("printer keeps working synchronized!");
 				// synchronized (client.messageQ){
-				System.out.println("Get in to while loop in printer!");
+				// System.out.println("Get in to while loop in printer!");
 				if(true){
-					System.out.println("printer keeps working! while loop");
-					System.out.println("Q empty? : "+ client.messageQ.isEmpty());
+					// System.out.println("printer keeps working! while loop");
+					// System.out.println("Q empty? : "+ client.messageQ.isEmpty());
 					String msg = client.messageQ.remove();
 					if(!msg.equals("ACK")){ // ordinary message
 						System.out.println(msg);
@@ -480,16 +512,16 @@ class printer implements Runnable {		// keeps reading from messageQ
 						int back_port = Integer.valueOf(client.clients.get(back_name).get(1));
 						try{
 							client.send("ACK", back_ip, back_port);
-							System.out.println("in printer: ACK sent to back_ip: "+back_ip+", back_port"+back_port);
+							// System.out.println("in printer: ACK sent to back_ip: "+back_ip+", back_port"+back_port);
 						}
 						catch (Exception e) {
 							e.printStackTrace();
 						}
 
-						System.out.print("ACK sent printer>>> ");
+						// System.out.print("ACK sent printer>>> ");
 					}
 					else{	// ACK
-						System.out.println("Here in printer, got an ACK!");
+						// System.out.println("Here in printer, got an ACK!");
 						try{
 							client.ackGot(); // set ack_status so send_P2P can act
 							// client.messageQ.wait();
