@@ -121,3 +121,4 @@ e.g.:
 	3.4 Other features:
 
 	If one user log in using another different PC (with different ip and/or port), it will just update the table so that everyone knows the updated contact information. It seams the nikc-name is the key to login.
+	
