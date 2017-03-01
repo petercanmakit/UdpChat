@@ -187,6 +187,8 @@ class UdpChatClient{
 			return null;
 		}
 
+		System.out.println("in recv(): Message from other client!");
+
 		return str;
 	}
 		/*
@@ -238,19 +240,21 @@ class UdpChatClient{
 	}
 
 	// preparation for send_P2P()
-	String ack_status = new String("NAK");
+	boolean ack_status = false;
 	void ackGot(){
-		ack_status = "ACK";
+		ack_status = true;
 	}
 	void ackBck(){
-		ack_status = "NAK";
+		ack_status = false;
 	}
 
 	public void send_P2P(String content, String user_recver) {
+		System.out.println("in send_P2P: user_recver is : "+user_recver);
 		String ip_str = this.clients.get(user_recver).get(0);
 		int port_num = Integer.valueOf(this.clients.get(user_recver).get(1));
 		try{
 			this.send(content,ip_str,port_num);
+			System.out.println("in send_P2P(): message sent to other client!");
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -265,31 +269,20 @@ class UdpChatClient{
       		public void run() {
 				System.out.println("Waiting for ACK");
 	        	// task to run goes here
-				synchronized (messageQ){
-					try{
-						messageQ.wait();
-					}
-					catch (Exception e) {
-						e.printStackTrace();
-					}
-					String wait = messageQ.poll();
-					if(wait.equals("ACK")){
-						System.out.println("ack status is " + ack_status);
-						System.out.println("wait is "+ wait);
-						ackGot();
-						System.out.println("ack status is " + ack_status);
-						messageQ.notify();
-					}
-				}
+				while(!ack_status){}		// wait for notifying
+				// got an ACK
+				System.out.println("ack status is " + ack_status);
+
+				System.out.println("ack status is " + ack_status);
+
 	        	System.out.println("Hello from the timer task!!!");
 	      	}
     	};
 
-		ackBck();
 		System.out.println("before timer starts ack status is " + ack_status);
     	Timer timer_4_ACK = new Timer();
     	long delay = 0;
-    	long inteval = 2500; //msec
+    	long inteval = 500; //msec
     	// schedules the task to be run in an interval
     	timer_4_ACK.schedule(task, delay);
 		try{
@@ -301,17 +294,18 @@ class UdpChatClient{
 		}
 		System.out.println("after timer ends ack status is " + ack_status);
 
-		// TODO time out send to server
-
-		if(ack_status.equals("ACK")){
+		// time out
+		// check ack_status
+		if(ack_status){	// got ack
 			System.out.println("wait finished ");
 			System.out.println("ack status is " + ack_status);
 			ackBck();
 			System.out.println("ack status is " + ack_status);
-			System.out.println("[Message received by " + user_recver + ".+]\n>>> ");
+			System.out.println("[Message received by " + user_recver + ".]\n>>> ");
 		}
 		else { // NAK
 			timer_4_ACK.cancel();
+			System.out.println("Timer canceled!");
 			// send to server
 			try{
 				this.send(this.nick_name + "#" + user_recver + "#" + content,
@@ -361,13 +355,18 @@ class sender implements Runnable {
 			Scanner sc = new Scanner(System.in);
 			String line = sc.nextLine();
 			System.out.println(line);
-			String[] usr_in = line.split("\\s+",3);
+			String[] usr_in = line.split("\\s+",4);
+			System.out.println("long: "+ usr_in.length);
 			for(int i =0;i<usr_in.length;i++){
 				System.out.println(usr_in[i]);
 			}
+			// System.out.println(usr_in[0]);
 			if(usr_in[0].equals("send")){
-				String name = new String(usr_in[1]);
-				String message = new String(usr_in[2]);
+				System.out.println(usr_in[1]);
+				System.out.println(usr_in[2]);
+				String name = usr_in[1];
+				String message = usr_in[2];
+				System.out.println("in sender: intend is "+name+", content is :"+client.nick_name+":  "+message);
 				System.out.println("Sending");
 				System.out.println(client.clients.toString());
 				try{
@@ -400,14 +399,20 @@ class receiver implements Runnable {	// keeps receiving from socket and put msg 
 			String msg = null;
 			try{
 				msg = client.recv();
+				System.out.println("in receiver, received message is "+ msg);
 			}
 			catch (Exception e) {
 				e.printStackTrace();
 			}
-			synchronized(client.messageQ){
-				if(msg!=null){
+			if(msg!=null){
+				synchronized(client.messageQ){
 					client.messageQ.add(msg);
+					client.messageQ.notify();
 				}
+
+				System.out.println("in receiver, added to Q");
+				System.out.println("in receiver, peek of Q: "+client.messageQ.peek());
+				System.out.println("in receiver, Q is like: "+client.messageQ.toString());
 			}
 		}
 	}
@@ -425,20 +430,73 @@ class printer implements Runnable {		// keeps reading from messageQ
 
 	@Override
 	public void run(){
-		synchronized (client.messageQ){
-			while(!client.messageQ.isEmpty()){
-				String msg = client.messageQ.peek();
-				if(!msg.equals("ACK")){ // ordinary message
-					client.messageQ.remove();
-					System.out.println(msg);
-					System.out.print("receiver>>> ");
-				}
-				else{	// ACK
+
+		/*
+		while(true){
+			// for test
+			System.out.println("Q now is like: "+client.messageQ.toString());
+			try{
+				Thread.sleep(2000);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		*/
+		System.out.println("printer starts working!");
+		while(true){
+			/* for testing
+			System.out.println("Q empty? : "+ client.messageQ.isEmpty());
+			try{
+				Thread.sleep(2000);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			*/
+			if(client.messageQ.isEmpty()){
+				synchronized(client.messageQ){
 					try{
 						client.messageQ.wait();
 					}
 					catch (Exception e) {
 						e.printStackTrace();
+					}
+				}
+
+			}
+			while(!client.messageQ.isEmpty()){
+				// System.out.println("printer keeps working synchronized!");
+				// synchronized (client.messageQ){
+				System.out.println("Get in to while loop in printer!");
+				if(true){
+					System.out.println("printer keeps working! while loop");
+					System.out.println("Q empty? : "+ client.messageQ.isEmpty());
+					String msg = client.messageQ.remove();
+					if(!msg.equals("ACK")){ // ordinary message
+						System.out.println(msg);
+						String back_name = msg.split(":\\s+")[0];
+						String back_ip = client.clients.get(back_name).get(0);
+						int back_port = Integer.valueOf(client.clients.get(back_name).get(1));
+						try{
+							client.send("ACK", back_ip, back_port);
+							System.out.println("in printer: ACK sent to back_ip: "+back_ip+", back_port"+back_port);
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+						}
+
+						System.out.print("ACK sent printer>>> ");
+					}
+					else{	// ACK
+						System.out.println("Here in printer, got an ACK!");
+						try{
+							client.ackGot(); // set ack_status so send_P2P can act
+							// client.messageQ.wait();
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+						}
 					}
 				}
 			}
