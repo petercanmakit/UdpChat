@@ -40,14 +40,16 @@ Now you can use send/deregister/reregister command.
 
 The first time you log with your nickname and port, you are registered immediately.		
 Now you can de-regiser by type:	
-	>>> dereg <nick_name>
-	
-or simply:	
-	>>> dereg
 
-And then you can regiser by:	
-	>>> reg <nick_name>	
+	>>> dereg <nick_name>
+or simply:
+	
+	>>> dereg	
+And then you can regiser by:
+	
+	>>> reg <nick_name>		
 or:	
+
 	>>> reg	
 
 The example:
@@ -76,23 +78,28 @@ If you dereg but the server is down, it will show:
 
 	>>> send <receriver_name> <message>
 e.g.:	
+
 	>>> send zjj hi
 	>>> [Message received by zjj.]
 
 At receiver side:
+
 	>>> peter:  hi
 
 If the receiver is offline, the sender will send the message to server. If the receiver just ctrl+C before dereg the sender will try 5 times in total if no ACK received then send it to server. The server will ping this "dead" user, if not pingACK back, it will change it's status to offline.
+
 	>>> send zjj Hello
 	>>> [Messages received by the server and saved]
 
 #### 3.3 Off-line Chat	
 peter:
+
 	>> [ zjj: off ]	[ peter: on ]
 	>>> send zjj Are you there?
 	>>> [Messages received by the server and saved]
 
 And when peter logs in, he will receive all the off-line messages from the server.
+
 	>>> reg
 	>>> [Client table updated.]
 	>>> [ zjj: on ]	[ peter: on ]	[ haha: on ]
@@ -102,6 +109,7 @@ And when peter logs in, he will receive all the off-line messages from the serve
 	>>> haha:  01/03/17 18:00:40  hi2222
 
 If log off and log on again, these messages will not appear since they are deleted at server side.
+
 	>>> dereg
 	>>> [You are Offline. Bye.]
 	>>> reg
@@ -110,6 +118,7 @@ If log off and log on again, these messages will not appear since they are delet
 
 When one quited the program before dereg, the status remains "on". If someone sends message to it, sender will not receive ACK so send to server. After testing, the server will notice it actually died, so changes its status to "off".
 For example, peter ctrl+C before dereg. And then zjj sends message to him.
+
 	>>> [ zjj: on ]	[ peter: on ]	[ haha: on ]
 	>>> send peter hihihi
 	>>> [No ACK from peter, message sent to server.]
