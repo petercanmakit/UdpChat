@@ -39,15 +39,16 @@ Now you can use send/deregister/reregister command.
 #### 3.1 Registration/de-registration	
 
 The first time you log with your nickname and port, you are registered immediately.		
-Now you can de-regiser by type:
+Now you can de-regiser by type:	
 	>>> dereg <nick_name>
-or simply:
+	
+or simply:	
 	>>> dereg
 
-And then you can regiser by:
-	>>> reg <nick_name>
-or:
-	>>> reg
+And then you can regiser by:	
+	>>> reg <nick_name>	
+or:	
+	>>> reg	
 
 The example:
 	>>> dereg
