@@ -131,5 +131,40 @@ Server ping to peter, but receives no pingACK. So the status of peter is set to 
 
 #### 3.4 Other features:
 
+Every time the client tries to send messages to server, such as sending reg/dereg and sending presumable off-line message for offline clients, if the server goes down, this client cannot get according ACK, the it will exit.	
+Here is an example:	There are three clients: peter, zjj, and haha online.
+
+	>>> [Client table updated.]
+	>>> [ zjj: on ]	[ peter: on ]	[ haha: on ]
+
+Now, haha quits program with ctrl+C. The table still shows the three are all online. And then zjj dereg.	
+(peter):	
+
+	>>> dereg
+	>>> [You are Offline. Bye.]
+
+(zjj):	
+
+	>>> [Client table updated.]
+	>>> [ zjj: on ]	[ peter: off ]	[ haha: on ]	
+Now server goes down... and zjj sends message to peter.	
+(zjj):
+
+	>>> send peter hhhhhhhhhh
+	>>> [Server not responding]
+	>>> [Exiting]
+zjj exits because there is no server. Now haha comes back online by reinitialize a client. However, server is not in service, sadly.	
+(haha):
+
+	>>> [Server not responding]
+	>>> [Exiting]
+
+
+	./UdpChat -c haha 160.3939 8000 8002
+	>>> [Welcome. You are registered.]
+	
+
+
+
 If one user logs in using another different PC (with different ip and/or port), it will just update the table so that everyone knows the updated contact information. It seams the nikc-name is the key to login.	
 Unfortunately, you cannot send any messages that contain "#"... It's a drawback.

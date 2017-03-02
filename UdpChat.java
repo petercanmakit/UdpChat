@@ -103,6 +103,12 @@ class UdpChatServer{
 					clients.get(nick_name).set(2,"on");
 					clients.get(nick_name).set(0,clnt_ip);
 					clients.get(nick_name).set(1,clnt_port);
+					try{
+						send("RegACK", clnt_ip, Integer.valueOf(clnt_port));
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
 					broadcast();
 					// check if there are off line mesg for this one
 					System.out.println(off_line_msgs.get(nick_name).toString());
@@ -130,12 +136,24 @@ class UdpChatServer{
 					clients.get(nick_name).set(2,"on");
 					clients.get(nick_name).set(0,clnt_ip);
 					clients.get(nick_name).set(1,clnt_port);
+					try{
+						send("RegACK", clnt_ip, Integer.valueOf(clnt_port));
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
 					broadcast();
 				}
 			}
 			else{
 				clients.put(nick_name,new ArrayList(Arrays.asList(clnt_ip,clnt_port,clnt_status)));
 				// broadcast to every user
+				try{
+					send("RegACK", clnt_ip, Integer.valueOf(clnt_port));
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
 				this.broadcast();
 			}
 		}
@@ -417,8 +435,9 @@ class UdpChatClient{
 			// this packet is from server
 			if(str.equals("offACK") || str.equals("offMsgACK") ||
 				str.startsWith("offMsgERR#") || str.startsWith("offMsgSending#") ||
-				str.equals("pingDead"))
+				str.equals("pingDead") || str.equals("RegACK"))
 			{
+				// System.out.println(str);
 				return str;
 			}
 			else{
@@ -517,13 +536,30 @@ class UdpChatClient{
 			// System.out.println("Timer canceled!");
 			// send to server as an off-line message
 			// format: off_m#<from_usr>#<to_usr>#<msg_str>
-			try{
+			backOffACK();
+			for(int i = 0; i<5 ;i++){
+				try{
 				this.send("off_m#"+ this.nick_name + "#" + user_recver + "#" + content,
 							this.server_ip, this.server_port);
+				}
+				catch (Exception e) {
+					System.out.println(e);
+					System.exit(1);
+				}
+				try{
+					Thread.sleep(500);
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+				if(offACK_status) break;
 			}
-			catch (Exception e) {
-				System.out.println(e);
-				System.exit(1);
+			if(offACK_status){
+				backOffACK();
+			}
+			else{
+				System.out.print(">>> [Server not responding]\n>>> [Exiting]\n");
+				System.exit(0);
 			}
 			System.out.print(">>> [No ACK from " + user_recver +", message sent to server.]\n");
 
@@ -561,7 +597,7 @@ class UdpChatClient{
 	 public void deRegister() {
 		long delay = 0;
      	long inteval = 500; //msec
-
+		backOffACK();
 		for(int i = 0; i<5 ;i++){
 			// System.out.println(i);
 			// System.out.println("offACK_status is "+String.valueOf(offACK_status));
@@ -593,6 +629,44 @@ class UdpChatClient{
      	// schedules the task to be run in an interval
 
 	 }
+
+	 public void Register() {
+		long delay = 0;
+     	long inteval = 500; //msec
+		backOffACK();
+		for(int i = 0; i<5 ;i++){
+			// System.out.println(i);
+			// System.out.println("offACK_status is "+String.valueOf(offACK_status));
+			try{
+				send(nick_name+"#"+getIP()+"#"+port,
+							server_ip, server_port);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			try{
+				Thread.sleep(inteval);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			if(offACK_status) break;
+
+		}
+		if(offACK_status){
+			backOffACK();
+			System.out.print("[Welcome. You are registered.]\n");
+
+
+		}
+		else{
+			System.out.print(">>> [Server not responding]\n>>> [Exiting]\n");
+			System.exit(0);
+		}
+     	// schedules the task to be run in an interval
+
+	 }
+
 
 }
 
@@ -642,14 +716,33 @@ class sender implements Runnable { // including sending deRegisteration to serve
 						}
 						else if(client.clients.get(name).get(2).equals("off")){
 							// the intend receiver is offline send it to server as offline msg
-							try{
+							client.backOffACK();
+							for(int i = 0; i<5 ;i++){
+
+								try{
 								client.send("off_m#"+ client.nick_name + "#" + name + "#" +
 											client.nick_name + ":  " + message,
 											client.server_ip, client.server_port);
+								}
+								catch (Exception e) {
+									System.out.println(e);
+									System.exit(1);
+								}
+								try{
+									Thread.sleep(500);
+								}
+								catch (Exception e) {
+									e.printStackTrace();
+								}
+								if(client.offACK_status) break;
+
 							}
-							catch (Exception e) {
-								System.out.println(e);
-								System.exit(1);
+							if(client.offACK_status){
+								client.backOffACK();
+							}
+							else{
+								System.out.print(">>> [Server not responding]\n>>> [Exiting]\n");
+								System.exit(0);
 							}
 
 						}
@@ -678,13 +771,7 @@ class sender implements Runnable { // including sending deRegisteration to serve
 			else if(usr_in[0].equals("reg")){
 				// System.out.println("in reg section!");
 				if(usr_in.length==1 || usr_in[1].equals(client.nick_name)){
-					try{
-						client.send(client.nick_name+"#"+client.getIP()+"#"+client.port,
-									client.server_ip,client.server_port);
-					}
-					catch (Exception e) {
-						e.printStackTrace();
-					}
+					client.Register();
 				}
 				else if(usr_in.length>1){
 					System.out.println(">>> [You cannot register user other than youself...]");
@@ -784,6 +871,7 @@ class printer implements Runnable {		// keeps reading from messageQ
 				// System.out.println("printer keeps working! while loop");
 				// System.out.println("Q empty? : "+ client.messageQ.isEmpty());
 				String msg = client.messageQ.poll();
+
 				if(msg.equals("pingDead")){
 					try{
 						client.send("pingACK", client.server_ip, client.server_port);
@@ -803,7 +891,8 @@ class printer implements Runnable {		// keeps reading from messageQ
 						e.printStackTrace();
 					}
 				}
-				else if(msg.equals("offACK")){	// offACK
+				else if(msg.equals("offACK") || msg.equals("RegACK")){
+					// offACK or RegACK both from server for reg and dereg
 					// System.out.println("Got an offACK");
 					try{
 						client.gotOffACK();
@@ -813,8 +902,9 @@ class printer implements Runnable {		// keeps reading from messageQ
 					}
 				}
 				else if(msg.equals("offMsgACK")) {
+					client.gotOffACK();
 					System.out.println("[Messages received by the server and saved]");
-					System.out.print(">>> ");
+					// System.out.print(">>> ");
 				}
 				else if(msg.startsWith("offMsgERR")) {
 					String err_usrname = msg.split("#")[1];
@@ -900,12 +990,10 @@ public class UdpChat{
 			  // start client
 			  UdpChatClient client = new UdpChatClient(client_port,server_ip,server_port,nick_name);
 			  // System.out.println("check client ds status:"+String.valueOf(client.ds.getInetAddress())+client.ds.getPort());
-			  // send register message to server
-			  client.send(nick_name+"#"+client.getIP()+"#"+client_port,server_ip,server_port);
-			  // System.out.println(client.recv());
-			  System.out.print(">>> [Welcome. You are registered.]\n");
 
-			  System.out.print(">>> ");
+
+			  // System.out.println(client.recv());
+
 			  int mutex = 1;
 			  Thread t_sender = new Thread(new sender(client,mutex));
 			  Thread t_receiver = new Thread(new receiver(client,mutex));
@@ -913,6 +1001,9 @@ public class UdpChat{
 			  t_sender.start();
 			  t_receiver.start();
 			  t_printer.start();
+			  // send register message to server
+			  client.Register();
+			  System.out.print(">>> ");
 
 			  t_sender.join();
 			  t_receiver.join();
