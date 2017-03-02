@@ -53,27 +53,28 @@ or:
 	>>> reg	
 
 The example:
+
 	>>> dereg
 	>>> [You are Offline. Bye.]
 	>>> reg peter
 	>>> [Client table updated.]
 	>>> [ zjj: on ]	[ peter: on ]
-
 On other client side:
+
 	>>> [Client table updated.]
 	>>> [ zjj: on ]	[ peter: on ]
 	>>> [Client table updated.]
 	>>> [ zjj: on ]	[ peter: off ]
 	>>> [Client table updated.]
 	>>> [ zjj: on ]	[ peter: on ]
-
 Note: If you ctrl+C and use command like showed before, you can log back.
 
 If you dereg but the server is down, it will show:
+
 	>>> dereg
 	>>> [Server not responding]
 	>>> [Exiting]
-
+	
 #### 3.2 Chatting
 
 	>>> send <receriver_name> <message>
@@ -81,7 +82,7 @@ e.g.:
 
 	>>> send zjj hi
 	>>> [Message received by zjj.]
-
+	
 At receiver side:
 
 	>>> peter:  hi
