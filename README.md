@@ -156,14 +156,9 @@ Now server goes down... and zjj sends message to peter.
 zjj exits because there is no server. Now haha comes back online by reinitialize a client. However, server is not in service, sadly.	
 (haha):
 
+	./UdpChat -c haha 160.39.140.239 8000 8002
 	>>> [Server not responding]
 	>>> [Exiting]
-
-
-	./UdpChat -c haha 160.3939 8000 8002
-	>>> [Welcome. You are registered.]
-	
-
 
 
 If one user logs in using another different PC (with different ip and/or port), it will just update the table so that everyone knows the updated contact information. It seams the nikc-name is the key to login.	
