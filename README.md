@@ -2,6 +2,12 @@ Author: Jiajun Zhang
 
 ## UdpChat: Command line instructions
 
+### 0. Download
+SSH:
+	git clone git@github.com:petercanmakit/UdpChat.git
+HTTP:
+	git clone https://github.com/petercanmakit/UdpChat.git
+
 ### 1. Compile:
 
 	make
@@ -93,13 +99,14 @@ If the receiver is offline, the sender will send the message to server. If the r
 	>>> [Messages received by the server and saved]
 
 #### 3.3 Off-line Chat	
-peter:
+(peter):
 
 	>> [ zjj: off ]	[ peter: on ]
 	>>> send zjj Are you there?
 	>>> [Messages received by the server and saved]
 
-And when peter logs in, he will receive all the off-line messages from the server.
+And when zjj logs in, he will receive all the off-line messages from the server.
+(zjj):
 
 	>>> reg
 	>>> [Client table updated.]
@@ -110,6 +117,7 @@ And when peter logs in, he will receive all the off-line messages from the serve
 	>>> haha:  01/03/17 18:00:40  hi2222
 
 If log off and log on again, these messages will not appear since they are deleted at server side.
+(zjj):
 
 	>>> dereg
 	>>> [You are Offline. Bye.]
