@@ -4,8 +4,10 @@ Author: Jiajun Zhang
 
 ### 0. Download
 SSH:
+
 	git clone git@github.com:petercanmakit/UdpChat.git
 HTTP:
+
 	git clone https://github.com/petercanmakit/UdpChat.git
 
 ### 1. Compile:
