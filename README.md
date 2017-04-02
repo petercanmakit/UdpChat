@@ -1,4 +1,4 @@
-Jiajun Zhang, UNI: jz2793
+Author: Jiajun Zhang
 
 ## UdpChat: Command line instructions
 
