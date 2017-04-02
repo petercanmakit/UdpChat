@@ -3,13 +3,11 @@ import java.util.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
-public class serverHandler implements Runnable {		// keeps reading from messageQ
+public class ServerHandler implements Runnable {		// keeps reading from messageQ
 
 	UdpChatServer server;
-	int mutex;
-	public serverHandler(UdpChatServer cc, int mm){
+	public ServerHandler(UdpChatServer cc){
 		this.server = cc;
-		this.mutex = mm;
 	}
 
 	@Override
