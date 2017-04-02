@@ -171,5 +171,5 @@ zjj exits because there is no server. Now haha comes back online by reinitialize
 	>>> [Exiting]
 
 
-If one user logs in using another different PC (with different ip and/or port), it will just update the table so that everyone knows the updated contact information. It seams the nikc-name is the key to login.	
+If one user logs in using another different PC (with different ip and/or port), it will just update the table so that everyone knows the updated contact information. It seams the nick-name is the key to login.	
 Unfortunately, you cannot send any messages that contain "#"... It's a drawback.
