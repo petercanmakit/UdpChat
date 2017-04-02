@@ -2,7 +2,7 @@ Author: Jiajun Zhang
 
 ## UdpChat: Command line instructions
 
-### 0. Download
+### 0. Download:
 SSH:
 
 	git clone git@github.com:petercanmakit/UdpChat.git
