@@ -3,9 +3,14 @@ import java.util.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
-public class ClientPrinter implements Runnable {		// keeps reading from messageQ
-										// if is ordinary message print out
-										// if is ACK, wait until main notify
+/*
+ * ClientPrinter thread keeps reading from message queue.
+ * if ordinary message, print it out;
+ * if any kind ACK message, change the according flag
+ * in order to let the specific waiting thread go to next step
+ */
+
+public class ClientPrinter implements Runnable {
 	UdpChatClient client;
 	public ClientPrinter(UdpChatClient cc){
 		this.client = cc;
@@ -27,11 +32,6 @@ public class ClientPrinter implements Runnable {		// keeps reading from messageQ
 
 			}
 			while(!client.messageQ.isEmpty()){
-				// System.out.println("I am in while!");
-				// System.out.println("printer keeps working synchronized!");
-				// synchronized (client.messageQ){
-				// System.out.println("Get in to while loop in printer!");
-
 				// System.out.println("printer keeps working! while loop");
 				// System.out.println("Q empty? : "+ client.messageQ.isEmpty());
 				String msg = client.messageQ.poll();
@@ -55,7 +55,7 @@ public class ClientPrinter implements Runnable {		// keeps reading from messageQ
 						e.printStackTrace();
 					}
 				}
-				else if(msg.equals("offACK") || msg.equals("RegACK")){
+				else if(msg.equals("offACK") || msg.equals("RegACK")) {
 					// offACK or RegACK both from server for reg and dereg
 					// System.out.println("Got an offACK");
 					try{
@@ -74,7 +74,7 @@ public class ClientPrinter implements Runnable {		// keeps reading from messageQ
 					System.out.println("[Client "+err_usrname+" exists!!]");
 					System.out.print(">>> ");
 				}
-				else if(msg.startsWith("offMsgSending#")){
+				else if(msg.startsWith("offMsgSending#")) {
 					String offmsg = msg.split("#")[1];
 					System.out.println(offmsg);
 					System.out.print(">>> ");
@@ -89,17 +89,14 @@ public class ClientPrinter implements Runnable {		// keeps reading from messageQ
 					String back_name = msg.split(":\\s+")[0];
 					String back_ip = client.clients.get(back_name).get(0);
 					int back_port = Integer.valueOf(client.clients.get(back_name).get(1));
-					try{
+					try {
 						client.send("ACK", back_ip, back_port);
 						// System.out.println("in printer: ACK sent to back_ip: "+back_ip+", back_port"+back_port);
 					}
 					catch (Exception e) {
 						e.printStackTrace();
 					}
-
-					// System.out.print("ACK sent printer>>> ");
 				}
-
 			}
 		}
 	}

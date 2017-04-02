@@ -3,8 +3,12 @@ import java.util.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
-public class ServerReceiver implements Runnable {	// keeps receiving from socket and put msg into messageQ
-										// synchronized
+/*
+ * ServerReceiver thread keeps receiving from socket and put msg into messageQ
+ * Synchronized with messageQ, notifies other waiting thread on messageQ
+ */
+
+public class ServerReceiver implements Runnable {
 	UdpChatServer server;
 	public ServerReceiver(UdpChatServer cc){
 		this.server = cc;

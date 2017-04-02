@@ -2,7 +2,13 @@ import java.net.*;
 import java.util.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-// sender and receiver and printer threads
+
+/*
+ * ClientSender thread reads from user input
+ * sends message to peer user or server
+ * after sending, wait for ACK accordingly
+ */
+
 public class ClientSender implements Runnable { // including sending deRegisteration to server
 	UdpChatClient client;
 	public ClientSender(UdpChatClient cc){

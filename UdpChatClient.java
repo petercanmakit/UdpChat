@@ -2,19 +2,20 @@ import java.net.*;
 import java.util.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+
 //****************************** Client Class *********************************
 public class UdpChatClient{
 
 	Hashtable<String,ArrayList<String>> clients = new Hashtable<String,ArrayList<String>>();
-
+	// <nick-name,[ip,port,status]>
 	Queue<String> messageQ = new LinkedList<String>();
-
 	String nick_name;
 	int port;
 	String server_ip;
 	int server_port;
 	DatagramSocket ds;
 	SocketAddress sock_addr;
+
 	// initialize
 	UdpChatClient(int portNumber, String serverIP, int serverPort, String nname) throws Exception{
 		server_ip = serverIP;
@@ -30,23 +31,20 @@ public class UdpChatClient{
 		}
 
 		sock_addr = ds.getLocalSocketAddress();
-
-		// System.out.println("Client info: nick_name: "+nick_name+" serverIp "+server_ip+" server_port "+server_port+" client_port "+port);
 	}
 
-
+	// close socket
 	public void destroy(){
 		ds.close();
 	}
 
+	// updata local client contact table when from server
 	public void updateClients (String str){
 		// formmat: {jiajun=[160.39.141.140, 8082], peter=[160.39.141.140, 8081], haha=[160.39.141.140, 8083]}
 		clients.clear();
 		str = str.replace("{","");
 		str = str.replace("}","");
 		str = str.replaceAll("\\s","");
-		// String [] strs = str.split("=[|],");
-		// System.out.println(str);
 		String [] strs = str.split("\\],|=\\[");
 
 		for(int i =0;i<strs.length;i=i+2){
@@ -57,9 +55,9 @@ public class UdpChatClient{
 		}
 		System.out.print("[Client table updated.]\n>>> ");
 		printClinetsTable();
-
 	}
 
+	// print out client contact table
 	public void printClinetsTable(){
 		// System.out.println(clients.toString());
 		Enumeration<String> enu = clients.keys();
@@ -70,20 +68,19 @@ public class UdpChatClient{
 		System.out.print("\n");
 	}
 
-	// 从socket 中读一个 packet出来， 阻塞函数
-	// 若来自 server 则更新clients table 并返回 null
-	// 若来自 其他client 则 return msg as a String
+	// reads one packet from socket, blocking
+	// if it's from server, updata client table, return null
+	// if it's from other client, return message string
 	public String recv() throws Exception{
 		byte[] buf = new byte[1024];
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
 	    ds.receive(dp);
-		// System.out.println("Receiving!");
 		String str = new String(dp.getData(), 0, dp.getLength());
 
 		// System.out.println(str);
-		// System.out.println(dp.getAddress().toString());
-		// System.out.println(dp.getPort());
-		if(dp.getAddress().toString().replace("/","").equals(server_ip) && dp.getPort()==this.server_port){
+		if(dp.getAddress().toString().replace("/","").equals(server_ip) &&
+			dp.getPort() == this.server_port)
+		{
 			// this packet is from server
 			if(str.equals("offACK") || str.equals("offMsgACK") ||
 				str.startsWith("offMsgERR#") || str.startsWith("offMsgSending#") ||
@@ -92,26 +89,25 @@ public class UdpChatClient{
 				// System.out.println(str);
 				return str;
 			}
-			else{
+			else {
 				updateClients(str);
 				// System.out.println(">>> [Client table updated.]");
 				System.out.print(">>> ");
 				return null;
 			}
 		}
-
 		// System.out.println("in recv(): Message from other client!");
-
 		return str;
 	}
 
+	// wrapper to send raw string to ip and port socket
 	public  void send(String content, String ip_str, int port) throws Exception{
 		InetAddress ip = InetAddress.getByName(ip_str);
 		DatagramPacket dp = new DatagramPacket(content.getBytes(), content.length(), ip, port);
 		ds.send(dp);
 	}
 
-	// preparation for send_P2P()
+	// preparation for send_P2P(), flags and flipping method
 	boolean ack_status = false;
 	void ackGot(){
 		ack_status = true;
@@ -120,6 +116,10 @@ public class UdpChatClient{
 		ack_status = false;
 	}
 
+	// send message to peer client spicified by user_recver
+	// wait for ACK, try five times if ACK not received in 500 ms
+	// if still not ACK, send it to server as offline message, also try five times
+	// wait for ACK from server, if not responding, quit
 	public void send_P2P(String content, String user_recver) {
 		// System.out.println("in send_P2P: user_recver is : "+user_recver);
 		String ip_str = this.clients.get(user_recver).get(0);
@@ -205,13 +205,12 @@ public class UdpChatClient{
 
 	}
 
+	// get IP of the this client
 	public String getIP() {
 		// cite from http://hanchaohan.blog.51cto.com/2996417/793377
           String ip;
           try {
-               /**返回本地主机。*/
                InetAddress addr = InetAddress.getLocalHost();
-               /**返回 IP 地址字符串（以文本表现形式）*/
                ip = addr.getHostAddress();
           } catch(Exception ex) {
               ip = "";
@@ -219,6 +218,7 @@ public class UdpChatClient{
           return ip;
      }
 
+	 // print client info
 	 public void printInfo() {
 		 System.out.println("Client created:\nIpAddr:"+this.getIP()+"\nPort: "+port);
 	 }
@@ -232,6 +232,8 @@ public class UdpChatClient{
 		 offACK_status = false;
 	 }
 
+	 // de-registration, put myself offline
+	 // also wait ACK within five trials
 	 public void deRegister() {
 		long delay = 0;
      	long inteval = 500; //msec
@@ -264,10 +266,10 @@ public class UdpChatClient{
 			System.out.print(">>> [Server not responding]\n>>> [Exiting]\n");
 			System.exit(0);
 		}
-     	// schedules the task to be run in an interval
-
 	 }
 
+	 // registration, put myself online
+	 // also wait ACK within five trials
 	 public void Register() {
 		long delay = 0;
      	long inteval = 500; //msec
@@ -291,19 +293,15 @@ public class UdpChatClient{
 			if(offACK_status) break;
 
 		}
-		if(offACK_status){
+		if(offACK_status) {
 			backOffACK();
 			System.out.print("[Welcome. You are registered.]\n");
 
 
 		}
-		else{
+		else {
 			System.out.print(">>> [Server not responding]\n>>> [Exiting]\n");
 			System.exit(0);
 		}
-     	// schedules the task to be run in an interval
-
 	 }
-
-
 }

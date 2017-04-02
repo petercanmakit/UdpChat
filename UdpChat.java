@@ -4,14 +4,15 @@ import java.util.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
-//***************************     MAIN      ************************************//
+//***************************     MAIN    **********************************//
 public class UdpChat{
 	public static void main(String[] args) throws Exception {
       // UdpChat <mode> <command-line arguments>
 	  if(args.length<2){
 		  System.out.println("Useage: UdpChat <mode> <command-line arguments>");
 		  System.out.println("For server: Useage: UdpChat -s <port>");
-		  System.out.println("For client: UdpChat -c <nick-name> <server-ip> <server-port> <client-port>");
+		  System.out.println("For client: UdpChat -c <nick-name> <server-ip> "
+		  										+"<server-port> <client-port>");
 		  System.exit(1);
 	  }
 	  String mode = args[0];
@@ -42,7 +43,8 @@ public class UdpChat{
 	  }
 	  else if(mode.equals("-c")){	//client mode
 		  if(args.length!=5){
-			  System.out.println("Useage: UdpChat -c <nick-name> <server-ip> <server-port> <client-port> \n");
+			  System.out.println("Useage: UdpChat -c <nick-name> <server-ip> "
+			  									+"<server-port> <client-port>");
 			  System.exit(1);
 		  }
 		  else{
@@ -52,7 +54,8 @@ public class UdpChat{
 			  int client_port = Integer.valueOf(args[4]);
 
 			  // start client
-			  UdpChatClient client = new UdpChatClient(client_port,server_ip,server_port,nick_name);
+			  UdpChatClient client = new UdpChatClient(client_port,server_ip,
+			  											server_port,nick_name);
 
 			  Thread t_sender = new Thread(new ClientSender(client));
 			  Thread t_receiver = new Thread(new ClientReceiver(client));

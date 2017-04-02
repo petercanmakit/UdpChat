@@ -3,13 +3,13 @@ import java.util.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
-
 //****************************** Server Class *********************************
 public class UdpChatServer{
 	Hashtable<String,ArrayList<String>> clients = new Hashtable<String,ArrayList<String>>();
 	// <nick-name,[ip,port,status]>
 	int port;
 	DatagramSocket ds;
+	// initialize
 	UdpChatServer(int portNumber) {
 		port = portNumber;
 		try{
@@ -21,21 +21,29 @@ public class UdpChatServer{
 		}
 	}
 
+	// close socket
+	public  void destroy(){
+		ds.close();
+	}
+
 	Queue<String> messageQ = new LinkedList<String>();
 
-	public  void send(String content, String ip_str, int client_port) throws Exception{
+	// wrapper for sending raw message to ip and port socket
+	public void send(String content, String ip_str, int client_port) throws Exception{
 		InetAddress ip = InetAddress.getByName(ip_str);
 		DatagramPacket dp = new DatagramPacket(content.getBytes(), content.length(), ip, client_port);
 		ds.send(dp);
 	}
 
+	// send user contact info to each online user
+	// the method is called when some information of one client is changed on serverside
 	public void broadcast() throws Exception{
-		System.out.println("in broadcast()");
+		// System.out.println("in broadcast()");
 		if(clients.isEmpty()){
 			// do nothing
-			System.out.println("in broadcast(): clients is empty");
 		}
 		else{
+			// send user contact info to each online user within iteration
 			Enumeration<String> users = clients.keys();
 			while(users.hasMoreElements()){
 				String nick_name = new String(String.valueOf(users.nextElement()));
@@ -62,6 +70,7 @@ public class UdpChatServer{
 		}
 	}
 
+	// get local time in format dd/MM/yy HH:mm:ss string
 	public String get_time_now(){
 		DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
 		Date dateobj = new Date();
@@ -69,6 +78,7 @@ public class UdpChatServer{
 		return df.format(dateobj).toString();
 	}
 
+	// table for offline message
 	Hashtable<String,ArrayList<String>> off_line_msgs = new Hashtable<String,ArrayList<String>>();
 	// <nick-name,[msg1,msg2,...]>
 	// msg_str format: off_m#<from_usr>#<to_usr>#<msg_str>#<time>
@@ -82,6 +92,10 @@ public class UdpChatServer{
 		pingACKstatus = false;
 	}
 
+	// when getting registration message from client:
+	// update clients contact table, braoudcast it
+	// it this client has offline messages send them and delete
+	// also deal with dereg and reg requests
 	public void register(String info) throws Exception {
 		// do registration, or deal with off-line msgs
 		System.out.println("in register()");
@@ -219,13 +233,12 @@ public class UdpChatServer{
 			}
 			// deregister and reregister
 		}
-
 		// System.out.println("after in register()");
 	}
 
+	// recive message from client, including registration and off-line message
+	// return as string
 	public String recv_register() throws Exception {
-		// to recive message from client, including registration and off-line message
-		// return as string
 		byte[] buf = new byte[1024];
 		// System.out.println("before in recv_register()");
 	    DatagramPacket dp = new DatagramPacket(buf, 1024);
@@ -235,19 +248,13 @@ public class UdpChatServer{
 	    String info = new String(dp.getData(), 0, dp.getLength());
 		System.out.println(info);
 		return info;
-		// this.register(info);
 	}
 
-	public  void destroy(){
-		ds.close();
-	}
-
+	// get IP addr of this server machine
 	public  String getIP() { // http://hanchaohan.blog.51cto.com/2996417/793377
           String ip;
           try {
-               /**返回本地主机。*/
                InetAddress addr = InetAddress.getLocalHost();
-               /**返回 IP 地址字符串（以文本表现形式）*/
                ip = addr.getHostAddress();
           } catch(Exception ex) {
               ip = "";
@@ -256,6 +263,7 @@ public class UdpChatServer{
           return ip;
      }
 
+	 // print out server info
 	 public  void printInfo() {
 		 System.out.println("Server created:\nIpAddr:"+this.getIP()+"\nPort: "+port);
 	 }
