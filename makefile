@@ -4,7 +4,7 @@
 # define a variable for a parameter. When you run make, you could use:
 # make run FILE="Algo.csv" para sobre escribir el valor de FILE.
 
-JFLAGS = -g
+JFLAGS = -g -Xlint
 JC = javac
 JVM= java
 FILE=
@@ -45,12 +45,12 @@ FILE=
 CLASSES = \
 	UdpChat.java \
 	UdpChatServer.java \
-	serverHandler.java \
-	serverReceiver.java \
+	ServerHandler.java \
+	ServerReceiver.java \
 	UdpChatClient.java \
-	receiver.java \
-	sender.java \
-	printer.java
+	ClientReceiver.java \
+	ClientSender.java \
+	ClientPrinter.java
 
 #
 # MAIN is a variable with the name of the file containing the main method

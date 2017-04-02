@@ -62,7 +62,7 @@ public class UdpChatClient{
 
 	public void printClinetsTable(){
 		// System.out.println(clients.toString());
-		Enumeration enu = clients.keys();
+		Enumeration<String> enu = clients.keys();
 		while(enu.hasMoreElements()){
 			String usr_name = enu.nextElement().toString();
 			System.out.print("[ "+usr_name + ": " + clients.get(usr_name).get(2)+" ]\t");

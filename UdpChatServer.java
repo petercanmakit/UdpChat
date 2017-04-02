@@ -36,7 +36,7 @@ public class UdpChatServer{
 			System.out.println("in broadcast(): clients is empty");
 		}
 		else{
-			Enumeration users = clients.keys();
+			Enumeration<String> users = clients.keys();
 			while(users.hasMoreElements()){
 				String nick_name = new String(String.valueOf(users.nextElement()));
 				String user_status = clients.get(nick_name).get(2);
@@ -144,7 +144,7 @@ public class UdpChatServer{
 				}
 			}
 			else{
-				clients.put(nick_name,new ArrayList(Arrays.asList(clnt_ip,clnt_port,clnt_status)));
+				clients.put(nick_name,new ArrayList<String>(Arrays.asList(clnt_ip,clnt_port,clnt_status)));
 				// broadcast to every user
 				try{
 					send("RegACK", clnt_ip, Integer.valueOf(clnt_port));
